@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextFunction, Request, Response } from "express";
 import { Prisma } from "../../generated/prisma/client";
+import { envVars } from "../../config/env";
+import { StatusCodes } from "http-status-codes";
 
 // global error handler
 export function errorHandler(
@@ -9,8 +11,12 @@ export function errorHandler(
     res: Response,
     next: NextFunction,
 ) {
-    let status = 500;
-    let message = "Internal server Error";
+    if (envVars.NODE_ENV === "development") {
+        console.log("Error From Global Err Handler :", err);
+    }
+
+    let status: number = StatusCodes.INTERNAL_SERVER_ERROR;
+    let message: string = "Internal server Error";
     let errorDetails: unknown = null;
 
     // prisma errors

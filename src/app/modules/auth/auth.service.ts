@@ -1,13 +1,17 @@
 import { UserStatus } from "../../../generated/prisma/enums";
 import { auth } from "../../lib/auth";
+import { prisma } from "../../lib/prisma";
 
 interface IRegisterPatientPayload {
     name: string;
     email: string;
     password: string;
 }
+
+//* Register Patient
 const registerPatient = async (payload: IRegisterPatientPayload) => {
     const { name, email, password } = payload;
+    //* create user via better auth build in function
     const data = await auth.api.signUpEmail({
         body: {
             name,
@@ -19,17 +23,36 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
         throw new Error("Failed to register patient");
     }
 
-    // ToDo : create patient profile by using transection after signup comteated
-    //  const patient = prisma.$transaction(async(tx)=> {
-    //   await tx.patient
-    //  })
-    return data;
+    //* create patient profile by using transection after signup comteated
+    try {
+        const patient = await prisma.$transaction(async (tx) => {
+            return await tx.patient.create({
+                data: {
+                    userId: data.user.id,
+                    name: payload.name,
+                    email: payload.email,
+                },
+            });
+        });
+        return {
+            ...data,
+            patient,
+        };
+    } catch (err) {
+        console.log("transection error :", err);
+        //! delete user if patient transection failed
+        await prisma.user.delete({ where: { id: data.user.id } });
+        throw err;
+    }
 };
+
 interface ILoginUserPayload {
     email: string;
     password: string;
     rememberMe?: boolean;
 }
+
+//* Login Patient
 const loginPatient = async (payload: ILoginUserPayload) => {
     const data = await auth.api.signInEmail({
         body: {
