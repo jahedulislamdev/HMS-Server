@@ -9,8 +9,8 @@ export interface ICreateDoctorPayload {
         address?: string;
         gender: Gender;
         contactNumber?: string;
-        qualification: string;
-        experience?: number;
+        qualification?: string;
+        experience: number;
         currentWorkplace: string;
         designation: string;
         registrationNumber: string;

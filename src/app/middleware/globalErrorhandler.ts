@@ -95,7 +95,7 @@ export function errorHandler(
     res.status(status).json({
         success: false,
         message,
-        error:
+        errorDetails:
             process.env.NODE_ENV === "development" ? errorDetails : undefined,
     });
 }

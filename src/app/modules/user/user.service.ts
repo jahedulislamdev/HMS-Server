@@ -1,7 +1,7 @@
 import { UserRole } from "../../../generated/prisma/client";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
-import { ICreateDoctorPayload } from "./interface";
+import { ICreateDoctorPayload } from "./user.interface";
 
 const createDoctor = async ({ payload }: { payload: ICreateDoctorPayload }) => {
     // if (role !== UserRole.SUPER_ADMIN && role !== UserRole.ADMIN) {
@@ -21,7 +21,7 @@ const createDoctor = async ({ payload }: { payload: ICreateDoctorPayload }) => {
         throw new Error("One or more specialties you selected does not exist");
     }
 
-    //* check if user already exists
+    //! check if user already exists
     const userExist = await prisma.user.findUnique({
         where: { email: payload.doctor.email },
     });
@@ -43,6 +43,19 @@ const createDoctor = async ({ payload }: { payload: ICreateDoctorPayload }) => {
     //* create doctor and specialties
     try {
         return await prisma.$transaction(async (tx) => {
+            //! check for unique registration number
+            const regNumExist = await tx.doctor.findUnique({
+                where: {
+                    registrationNumber: payload.doctor.registrationNumber,
+                },
+            });
+            if (regNumExist) {
+                throw new Error(
+                    "Doctor with this registration number already exists",
+                );
+            }
+
+            //* create doctor
             const doctor = await tx.doctor.create({
                 data: {
                     userId: userData.user.id,
@@ -70,23 +83,23 @@ const createDoctor = async ({ payload }: { payload: ICreateDoctorPayload }) => {
                     designation: true,
                     experience: true,
                     address: true,
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            emailVerified: true,
-                            isDeleted: true,
-                            deletedAt: true,
-                        },
-                    },
                     specialty: {
                         select: {
                             specialty: {
                                 select: {
-                                    title: true,
                                     id: true,
+                                    title: true,
                                 },
                             },
+                        },
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            emailVerified: true,
+                            isDeleted: true,
+                            deletedAt: true,
+                            status: true,
                         },
                     },
                     createdAt: true,
