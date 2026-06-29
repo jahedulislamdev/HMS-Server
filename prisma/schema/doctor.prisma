@@ -1,8 +1,9 @@
 model Doctor {
   id                 String             @id @default(uuid())
   name               String
+  email              String             
   profilePhoto       String?
-  contactNumber      String
+  contactNumber      String?
   address            String?
   registrationNumber String             @unique
   experience         Int                @default(0)
