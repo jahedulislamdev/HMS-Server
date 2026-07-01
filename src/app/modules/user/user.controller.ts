@@ -7,7 +7,7 @@ import { StatusCodes } from "http-status-codes";
 const createDoctor = catchAsync(async (req: Request, res: Response) => {
     const result = await userService.createDoctor({
         payload: req.body,
-        //   role: req.user.role,
+        role: req.user?.role,
     });
     sendResponse(res, {
         statusCode: StatusCodes.CREATED,

@@ -1,24 +1,35 @@
+import { StatusCodes } from "http-status-codes";
 import { UserRole } from "../../../generated/prisma/client";
+import AppError from "../../helper/Apperror";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { ICreateDoctorPayload } from "./user.interface";
 
-const createDoctor = async ({ payload }: { payload: ICreateDoctorPayload }) => {
-    // if (role !== UserRole.SUPER_ADMIN && role !== UserRole.ADMIN) {
-    //     throw new Error("You are not authorized to create doctor");
-    // }
-    // console.log(payload);
+const createDoctor = async ({
+    payload,
+    role,
+}: {
+    payload: ICreateDoctorPayload;
+    role: UserRole;
+}) => {
+    if (role !== UserRole.SUPER_ADMIN && role !== UserRole.ADMIN) {
+        throw new AppError(
+            StatusCodes.FORBIDDEN,
+            "You are not allowed to create doctor",
+        );
+    }
     const { doctor, specialties, password } = payload;
+
     //* check if specialty exist
     const specialty = await prisma.specialty.findMany({
         where: { id: { in: payload.specialties } },
     });
 
-    // console.log("payload specialty", payload.specialties);
-    // console.log(specialty);
-
     if (specialty.length !== specialties.length) {
-        throw new Error("One or more specialties you selected does not exist");
+        throw new AppError(
+            StatusCodes.BAD_REQUEST,
+            "One or more specialties you selected does not exist",
+        );
     }
 
     //! check if user already exists
@@ -26,7 +37,10 @@ const createDoctor = async ({ payload }: { payload: ICreateDoctorPayload }) => {
         where: { email: payload.doctor.email },
     });
     if (userExist) {
-        throw new Error("user with this email already exists");
+        throw new AppError(
+            StatusCodes.BAD_REQUEST,
+            "user with this email already exists",
+        );
     }
 
     //* create user
@@ -50,7 +64,8 @@ const createDoctor = async ({ payload }: { payload: ICreateDoctorPayload }) => {
                 },
             });
             if (regNumExist) {
-                throw new Error(
+                throw new AppError(
+                    StatusCodes.BAD_REQUEST,
                     "Doctor with this registration number already exists",
                 );
             }

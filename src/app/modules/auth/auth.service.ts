@@ -1,4 +1,6 @@
+import { StatusCodes } from "http-status-codes";
 import { UserStatus } from "../../../generated/prisma/enums";
+import AppError from "../../helper/Apperror";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 
@@ -20,7 +22,10 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
         },
     });
     if (!data.user) {
-        throw new Error("Failed to register patient");
+        throw new AppError(
+            StatusCodes.BAD_REQUEST,
+            "Failed to register patient",
+        );
     }
 
     //* create patient profile by using transection after signup comteated
@@ -62,10 +67,10 @@ const loginPatient = async (payload: ILoginUserPayload) => {
         },
     });
     if (data.user.status === UserStatus.BLOCKED) {
-        throw new Error("user is blocked");
+        throw new AppError(StatusCodes.FORBIDDEN, "user is blocked");
     }
     if (data.user.isDeleted || data.user.status === UserStatus.DELETED) {
-        throw new Error("user is deleted");
+        throw new AppError(StatusCodes.NOT_FOUND, "user is deleted");
     }
     return data;
 };

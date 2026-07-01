@@ -28,12 +28,13 @@ export function errorHandler(
         });
     }
 
-    // prisma errors
+    //* prisma errors
     //! Validation error (missing / wrong field)
     if (err instanceof Error) {
         status = StatusCodes.BAD_REQUEST;
         message = err.message;
-        errorDetails = err.stack;
+        errorDetails =
+            envVars.NODE_ENV === "development" ? err.stack : undefined;
     } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
         switch (err.code) {
             case "P2002":

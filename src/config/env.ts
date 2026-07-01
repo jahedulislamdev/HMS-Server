@@ -1,4 +1,6 @@
 import dotenv from "dotenv";
+import AppError from "../app/helper/Apperror";
+import { StatusCodes } from "http-status-codes";
 dotenv.config();
 
 interface EnvConfig {
@@ -20,8 +22,9 @@ const loadEnvVariables = (): EnvConfig => {
     ];
     requiredEnvVariables.forEach((v) => {
         if (!process.env[v]) {
-            throw new Error(
-                `Environment Variable ${v} is required but not set is .env file`,
+            throw new AppError(
+                StatusCodes.NOT_FOUND,
+                `Environment Variable ${v} is required but not set in .env file`,
             );
         }
     });

@@ -1,4 +1,6 @@
+import { StatusCodes } from "http-status-codes";
 import { UserRole } from "../../../generated/prisma/enums";
+import AppError from "../../helper/Apperror";
 import { prisma } from "../../lib/prisma";
 import { IUpdateDoctorPayload } from "./doctor.iterface";
 //* get all doctor
@@ -45,14 +47,17 @@ const updateDoctor = async ({
         where: { id },
     });
     if (!doctor) {
-        throw new Error("Doctor not found");
+        throw new AppError(StatusCodes.NOT_FOUND, "Doctor not found");
     }
 
     const isOwner = doctor.userId === userId;
     const isAdmin = role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
 
     if (!isOwner && !isAdmin) {
-        throw new Error("You are not authorized to update doctor");
+        throw new AppError(
+            StatusCodes.FORBIDDEN,
+            "You are not allowed to update doctor",
+        );
     }
     return await prisma.doctor.update({
         where: { id },
@@ -75,14 +80,17 @@ const deleteDoctor = async ({
     });
 
     if (!doctor) {
-        throw new Error("Doctor not found");
+        throw new AppError(StatusCodes.NOT_FOUND, "Doctor not found");
     }
 
     const isOwner = doctor.userId === userId;
     const isAdmin = role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
 
     if (!isOwner && !isAdmin) {
-        throw new Error("You are not authorized to delete doctor");
+        throw new AppError(
+            StatusCodes.FORBIDDEN,
+            "You are not allowed to delete doctor",
+        );
     }
 
     //! soft delete doctor
