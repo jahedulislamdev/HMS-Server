@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { UserRole } from "../../../generated/prisma/client";
-import AppError from "../../helper/Apperror";
+import AppError from "../../helper/AppError";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { ICreateDoctorPayload } from "./user.interface";
