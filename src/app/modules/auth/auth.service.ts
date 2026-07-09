@@ -11,7 +11,7 @@ interface IRegisterPatientPayload {
     password: string;
 }
 
-//* Register Patient
+//* Register Patient (user will automatically login after register)
 const registerPatient = async (payload: IRegisterPatientPayload) => {
     const { name, email, password } = payload;
     //* create user via better auth build in function
@@ -40,9 +40,33 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
                 },
             });
         });
+
+        const accessToken = authTokens.getAccessToken({
+            payload: {
+                id: data.user.id,
+                email: data.user.email,
+                role: data.user.role,
+                emailVerified: data.user.emailVerified,
+                isDeleted: data.user.isDeleted,
+                status: data.user.status,
+            },
+        });
+        const refreshToken = authTokens.getRefreshToken({
+            payload: {
+                id: data.user.id,
+                email: data.user.email,
+                role: data.user.role,
+                emailVerified: data.user.emailVerified,
+                isDeleted: data.user.isDeleted,
+                status: data.user.status,
+            },
+        });
         return {
             ...data,
+            token: data.token,
             patient,
+            accessToken,
+            refreshToken,
         };
     } catch (err) {
         console.log("transection error :", err);

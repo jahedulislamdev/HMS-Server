@@ -13,6 +13,9 @@ interface EnvConfig {
     REFRESH_TOKEN_SECRET: string;
     ACCESS_TOKEN_EXPIRATION: string;
     REFRESH_TOKEN_EXPIRATION: string;
+    BETTER_AUTH_TOKEN_EXPIRATION: string;
+    BETTER_AUTH_TOKEN_UPDATE_AGE: string;
+    BETTER_AUTH_TOKEN_COOKIE_CACHE_MAX_AGE: string;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -27,6 +30,9 @@ const loadEnvVariables = (): EnvConfig => {
         "REFRESH_TOKEN_SECRET",
         "ACCESS_TOKEN_EXPIRATION",
         "REFRESH_TOKEN_EXPIRATION",
+        "BETTER_AUTH_TOKEN_EXPIRATION",
+        "BETTER_AUTH_TOKEN_UPDATE_AGE",
+        "BETTER_AUTH_TOKEN_COOKIE_CACHE_MAX_AGE",
     ];
 
     requiredEnvVariables.forEach((v) => {
@@ -48,6 +54,12 @@ const loadEnvVariables = (): EnvConfig => {
         ACCESS_TOKEN_EXPIRATION: process.env.ACCESS_TOKEN_EXPIRATION as string,
         REFRESH_TOKEN_EXPIRATION: process.env
             .REFRESH_TOKEN_EXPIRATION as string,
+        BETTER_AUTH_TOKEN_EXPIRATION: process.env
+            .BETTER_AUTH_TOKEN_EXPIRATION as string,
+        BETTER_AUTH_TOKEN_UPDATE_AGE: process.env
+            .BETTER_AUTH_TOKEN_UPDATE_AGE as string,
+        BETTER_AUTH_TOKEN_COOKIE_CACHE_MAX_AGE: process.env
+            .BETTER_AUTH_TOKEN_COOKIE_CACHE_MAX_AGE as string,
     };
 };
 export const envVars = loadEnvVariables();
