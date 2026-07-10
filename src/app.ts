@@ -3,10 +3,12 @@ import { indexRoutes } from "./app/routes";
 import express, { Application, Request, Response } from "express";
 import { errorHandler } from "./app/middleware/globalErrorhandler";
 import notFoundHandler from "./app/middleware/notFound";
+import cookieParser from "cookie-parser";
 
 const app: Application = express();
 //* cors check
 app.use(cors({}));
+app.use(cookieParser());
 
 //* Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));

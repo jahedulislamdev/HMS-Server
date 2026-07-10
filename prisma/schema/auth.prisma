@@ -15,6 +15,7 @@ model User {
   accounts           Account[]
   patient            Patient?
   doctor             Doctor?
+  admin              Admin?
 
   @@unique([email])
   @@index([isDeleted], name: "idx_user_deleted")

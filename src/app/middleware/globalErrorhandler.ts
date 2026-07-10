@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { Prisma } from "../../generated/prisma/client";
 import { envVars } from "../../config/env";
 import { StatusCodes } from "http-status-codes";
+import { ZodError } from "zod";
 
 // global error handler
 export function errorHandler(
@@ -11,64 +12,73 @@ export function errorHandler(
     res: Response,
     next: NextFunction,
 ) {
-    if (envVars.NODE_ENV === "development") {
-        console.log("Error From Global Err Handler :", err);
-    }
-
     let status: number = StatusCodes.INTERNAL_SERVER_ERROR;
     let message: string = "Internal server Error";
     let errorDetails: unknown = null;
 
-    // prisma errors
+    //! zod validation error
+    if (err instanceof ZodError) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: "Invalid input data.",
+            errorSource: err.issues.map((issue) => ({
+                path: issue.path.join("."),
+                message: issue.message,
+            })),
+        });
+    }
+
+    //* prisma errors
     //! Validation error (missing / wrong field)
     if (err instanceof Error) {
-        status = 400;
+        status = StatusCodes.BAD_REQUEST;
         message = err.message;
-        errorDetails = err.stack;
+        errorDetails =
+            envVars.NODE_ENV === "development" ? err.stack : undefined;
     } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
         switch (err.code) {
             case "P2002":
-                status = 409;
+                status = StatusCodes.CONFLICT;
                 message = `Duplicate value. This record already exists.`;
                 errorDetails = err.meta;
                 break;
 
             case "P2025":
-                status = 404;
+                status = StatusCodes.NOT_FOUND;
                 message = "Requested resource not found.";
                 errorDetails = err.meta;
                 break;
 
             case "P2003":
-                status = 400;
+                status = StatusCodes.BAD_REQUEST;
                 message = "Invalid reference (foreign key failed).";
                 errorDetails = err.meta;
                 break;
 
             case "P2014":
-                status = 400;
+                status = StatusCodes.BAD_REQUEST;
                 message = "Invalid relation between records.";
                 errorDetails = err.meta;
                 break;
 
             default:
-                status = 400;
+                status = StatusCodes.BAD_REQUEST;
                 message = "Database error occurred.";
                 errorDetails = err.message;
         }
     } else if (err instanceof Prisma.PrismaClientValidationError) {
-        status = 400;
+        status = StatusCodes.BAD_REQUEST;
         message = "Invalid or missing input data. Please check your fields.";
         errorDetails = err.message;
     } //! Prisma DB connection issue
     else if (err instanceof Prisma.PrismaClientInitializationError) {
-        status = 500;
+        status = StatusCodes.INTERNAL_SERVER_ERROR;
         message = "Database connection failed.Try again later.";
         errorDetails = err.message;
     }
     //! Prisma unknown error
     else if (err instanceof Prisma.PrismaClientUnknownRequestError) {
-        status = 500;
+        status = StatusCodes.INTERNAL_SERVER_ERROR;
         message = "Unknown database error.";
         errorDetails = err.message;
     } else if (err.statusCode && err.message) {
@@ -78,13 +88,13 @@ export function errorHandler(
     }
     //!  Prisma Rust panic error (CRITICAL)
     else if (err instanceof Prisma.PrismaClientRustPanicError) {
-        status = 500;
+        status = StatusCodes.INTERNAL_SERVER_ERROR;
         message = "Critical database engine error.";
         errorDetails = err.message;
     }
     //! Syntax Error (invalid JSON)
     else if (err instanceof SyntaxError && "body" in err) {
-        status = 400;
+        status = StatusCodes.BAD_REQUEST;
         message = "Invalid JSON format.";
     }
     //! Known request error (unique, not found, FK, etc.)
@@ -95,7 +105,7 @@ export function errorHandler(
     res.status(status).json({
         success: false,
         message,
-        error:
-            process.env.NODE_ENV === "development" ? errorDetails : undefined,
+        errorDetails:
+            envVars.NODE_ENV === "development" ? errorDetails : undefined,
     });
 }

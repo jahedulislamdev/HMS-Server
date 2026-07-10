@@ -1,6 +1,9 @@
+import { StatusCodes } from "http-status-codes";
 import { UserStatus } from "../../../generated/prisma/enums";
+import AppError from "../../helper/AppError";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
+import { authTokens } from "../../utils/token";
 
 interface IRegisterPatientPayload {
     name: string;
@@ -8,7 +11,7 @@ interface IRegisterPatientPayload {
     password: string;
 }
 
-//* Register Patient
+//* Register Patient (user will automatically login after register)
 const registerPatient = async (payload: IRegisterPatientPayload) => {
     const { name, email, password } = payload;
     //* create user via better auth build in function
@@ -20,7 +23,10 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
         },
     });
     if (!data.user) {
-        throw new Error("Failed to register patient");
+        throw new AppError(
+            StatusCodes.BAD_REQUEST,
+            "Failed to register patient",
+        );
     }
 
     //* create patient profile by using transection after signup comteated
@@ -34,9 +40,33 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
                 },
             });
         });
+
+        const accessToken = authTokens.getAccessToken({
+            payload: {
+                id: data.user.id,
+                email: data.user.email,
+                role: data.user.role,
+                emailVerified: data.user.emailVerified,
+                isDeleted: data.user.isDeleted,
+                status: data.user.status,
+            },
+        });
+        const refreshToken = authTokens.getRefreshToken({
+            payload: {
+                id: data.user.id,
+                email: data.user.email,
+                role: data.user.role,
+                emailVerified: data.user.emailVerified,
+                isDeleted: data.user.isDeleted,
+                status: data.user.status,
+            },
+        });
         return {
             ...data,
+            token: data.token,
             patient,
+            accessToken,
+            refreshToken,
         };
     } catch (err) {
         console.log("transection error :", err);
@@ -62,12 +92,33 @@ const loginPatient = async (payload: ILoginUserPayload) => {
         },
     });
     if (data.user.status === UserStatus.BLOCKED) {
-        throw new Error("user is blocked");
+        throw new AppError(StatusCodes.FORBIDDEN, "user is blocked");
     }
     if (data.user.isDeleted || data.user.status === UserStatus.DELETED) {
-        throw new Error("user is deleted");
+        throw new AppError(StatusCodes.NOT_FOUND, "user is deleted");
     }
-    return data;
+    const accessToken = authTokens.getAccessToken({
+        payload: {
+            id: data.user.id,
+            email: data.user.email,
+            role: data.user.role,
+            emailVerified: data.user.emailVerified,
+            isDeleted: data.user.isDeleted,
+            status: data.user.status,
+        },
+    });
+    const refreshToken = authTokens.getRefreshToken({
+        payload: {
+            id: data.user.id,
+            email: data.user.email,
+            role: data.user.role,
+            emailVerified: data.user.emailVerified,
+            isDeleted: data.user.isDeleted,
+            status: data.user.status,
+        },
+    });
+
+    return { ...data, accessToken, refreshToken };
 };
 
 export const authService = { registerPatient, loginPatient };
