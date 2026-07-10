@@ -1,10 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { StatusCodes } from "http-status-codes";
 import { UserRole } from "../../../generated/prisma/client";
 import AppError from "../../helper/AppError";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
-import { ICreateDoctorPayload } from "./user.interface";
-
+import { ICreateAdminPayload, ICreateDoctorPayload } from "./user.interface";
+import { statusCodes } from "better-auth";
+//* create doctor
 const createDoctor = async ({
     payload,
     role,
@@ -38,7 +40,7 @@ const createDoctor = async ({
     });
     if (userExist) {
         throw new AppError(
-            StatusCodes.BAD_REQUEST,
+            StatusCodes.CONFLICT,
             "user with this email already exists",
         );
     }
@@ -65,7 +67,7 @@ const createDoctor = async ({
             });
             if (regNumExist) {
                 throw new AppError(
-                    StatusCodes.BAD_REQUEST,
+                    StatusCodes.CONFLICT,
                     "Doctor with this registration number already exists",
                 );
             }
@@ -129,4 +131,41 @@ const createDoctor = async ({
     }
 };
 
-export const userService = { createDoctor };
+//* create admin
+const createAdmin = async ({
+    payload,
+    role,
+}: {
+    payload: ICreateAdminPayload;
+    role: UserRole;
+}) => {
+    if (role !== UserRole.ADMIN && role !== UserRole.SUPER_ADMIN) {
+        throw new AppError(
+            statusCodes.FORBIDDEN,
+            "Forbidden Access : You are not allowed to create admin!",
+        );
+    }
+    const userExist = await prisma.user.findUnique({
+        where: { email: payload.admin.email },
+    });
+    if (userExist) {
+        throw new AppError(
+            StatusCodes.CONFLICT,
+            "user with this email already exists",
+        );
+    }
+    const { admin, password, role: userRole } = payload;
+    const userData = await auth.api.signUpEmail({
+        body: { ...admin, password, role: userRole, needPasswordChange: true },
+    });
+    try {
+        return await prisma.admin.create({
+            data: { userId: userData.user.id, ...admin },
+        });
+    } catch (error: any) {
+        console.log("error catching admin : ", error);
+        await prisma.user.delete({ where: { id: userData.user.id } });
+        throw error;
+    }
+};
+export const userService = { createDoctor, createAdmin };
