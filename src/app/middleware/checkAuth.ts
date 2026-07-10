@@ -73,7 +73,7 @@ export default function checkAuth(...authRoles: UserRole[]) {
                     ) {
                         throw new AppError(
                             StatusCodes.FORBIDDEN,
-                            "User does not have permission to access this resource",
+                            "Access Forbidden: you doesn't have permission to access this resource",
                         );
                     }
                 }
@@ -109,7 +109,7 @@ export default function checkAuth(...authRoles: UserRole[]) {
             ) {
                 throw new AppError(
                     StatusCodes.FORBIDDEN,
-                    "User does not have permission to access this resource",
+                    "Access Forbidden: you doesn't have permission to access this resource",
                 );
             }
 

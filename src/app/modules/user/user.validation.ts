@@ -77,7 +77,8 @@ export const adminSchema = z.object({
         contactNumber: z
             .string("Contact number is required.")
             .min(11, "Contact number must be at least 11 digits.")
-            .max(14, "Contact number cannot exceed 14 digits."),
+            .max(14, "Contact number cannot exceed 14 digits.")
+            .optional(),
 
         profilePhoto: z.string().optional(),
         address: z

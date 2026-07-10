@@ -16,7 +16,7 @@ const createDoctor = catchAsync(async (req: Request, res: Response) => {
     });
 });
 const createAdmin = catchAsync(async (req: Request, res: Response) => {
-    const result = await userService.createDoctor({
+    const result = await userService.createAdmin({
         payload: req.body,
         role: req.user?.role,
     });

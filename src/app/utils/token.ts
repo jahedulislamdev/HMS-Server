@@ -16,7 +16,7 @@ export const authTokens = {
         } as SignOptions);
     },
     setAccessTokenCookie({ res, token }: { res: Response; token: string }) {
-        console.log(token);
+        // console.log(token);
 
         cookieUtils.setCookie(res, "access_token", token, {
             httpOnly: true,

@@ -17,13 +17,13 @@ router.get(
     adminController.getAdminById,
 );
 router.patch(
-    "/",
+    "/:id",
     validateRequest(IUpdateAdminPayloadSchema),
     checkAuth(UserRole.SUPER_ADMIN, UserRole.ADMIN),
     adminController.updateAdmin,
 );
 router.delete(
-    "/",
+    "/:id",
     checkAuth(UserRole.SUPER_ADMIN, UserRole.ADMIN),
     adminController.deleteAdmin,
 );

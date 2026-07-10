@@ -20,7 +20,6 @@ const getAdminById = async (id: string) => {
     }
     return await prisma.admin.findUnique({
         where: { id },
-        include: { user: true },
     });
 };
 

@@ -17,7 +17,7 @@ router.post(
     "/create-admin",
     validateRequest(adminSchema),
     checkAuth(UserRole.SUPER_ADMIN),
-    userController.createDoctor,
+    userController.createAdmin,
 );
 
 export const userRoutes = router;
