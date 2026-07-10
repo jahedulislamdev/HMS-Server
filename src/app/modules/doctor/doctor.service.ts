@@ -1,8 +1,9 @@
-import { StatusCodes } from "http-status-codes";
-import { UserRole } from "../../../generated/prisma/enums";
-import AppError from "../../helper/Apperror";
-import { prisma } from "../../lib/prisma";
+import { UserRole, UserStatus } from "../../../generated/prisma/enums";
 import { IUpdateDoctorPayload } from "./doctor.iterface";
+import { StatusCodes } from "http-status-codes";
+import AppError from "../../helper/AppError";
+import { prisma } from "../../lib/prisma";
+
 //* get all doctor
 const getDoctors = async () => {
     return await prisma.doctor.findMany({
@@ -31,6 +32,7 @@ const getDoctorById = async ({ id }: { id: string }) => {
         },
     });
 };
+
 //* update doctor
 const updateDoctor = async ({
     id,
@@ -94,11 +96,25 @@ const deleteDoctor = async ({
     }
 
     //! soft delete doctor
-    return await prisma.doctor.update({
-        where: { id },
-        data: { isDeleted: true },
+    return await prisma.$transaction(async (tx) => {
+        await tx.doctor.update({
+            where: { id },
+            data: { isDeleted: true },
+        });
+        await tx.user.update({
+            where: { id: userId },
+            data: { isdeleted: true, status: UserStatus.DELETED },
+        });
+        await tx.session.deleteMany({
+            where: { userId: doctor.userId },
+        });
+        await tx.account.deleteMany({
+            where: { userId: doctor.userId },
+        });
+        return getDoctorById({ id });
     });
 };
+
 export const doctorService = {
     getDoctors,
     getDoctorById,

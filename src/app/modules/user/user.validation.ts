@@ -80,7 +80,10 @@ export const adminSchema = z.object({
             .max(14, "Contact number cannot exceed 14 digits."),
 
         profilePhoto: z.string().optional(),
-        address: z.string().optional(),
+        address: z
+            .string()
+            .max(200, "Address cannot exceed 200 characters.")
+            .optional(),
     }),
     role: z.enum(
         [UserRole.ADMIN, UserRole.SUPER_ADMIN],
