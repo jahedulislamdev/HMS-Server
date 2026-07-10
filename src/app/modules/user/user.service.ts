@@ -5,21 +5,14 @@ import AppError from "../../helper/AppError";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { ICreateAdminPayload, ICreateDoctorPayload } from "./user.interface";
-import { statusCodes } from "better-auth";
+
 //* create doctor
 const createDoctor = async ({
     payload,
-    role,
 }: {
     payload: ICreateDoctorPayload;
     role: UserRole;
 }) => {
-    if (role !== UserRole.SUPER_ADMIN && role !== UserRole.ADMIN) {
-        throw new AppError(
-            StatusCodes.FORBIDDEN,
-            "You are not allowed to create doctor",
-        );
-    }
     const { doctor, specialties, password } = payload;
 
     //* check if specialty exist
@@ -134,17 +127,10 @@ const createDoctor = async ({
 //* create admin
 const createAdmin = async ({
     payload,
-    role,
 }: {
     payload: ICreateAdminPayload;
     role: UserRole;
 }) => {
-    if (role !== UserRole.ADMIN && role !== UserRole.SUPER_ADMIN) {
-        throw new AppError(
-            statusCodes.FORBIDDEN,
-            "Forbidden Access : You are not allowed to create admin!",
-        );
-    }
     const userExist = await prisma.user.findUnique({
         where: { email: payload.admin.email },
     });
@@ -168,4 +154,5 @@ const createAdmin = async ({
         throw error;
     }
 };
+
 export const userService = { createDoctor, createAdmin };

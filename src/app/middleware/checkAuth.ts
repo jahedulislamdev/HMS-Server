@@ -77,6 +77,12 @@ export default function checkAuth(...authRoles: UserRole[]) {
                         );
                     }
                 }
+                const user = sessionExists?.user;
+                req.user = {
+                    id: user?.id as string,
+                    email: user?.email as string,
+                    role: user?.role as UserRole,
+                };
             }
 
             //* access token verify
@@ -106,6 +112,7 @@ export default function checkAuth(...authRoles: UserRole[]) {
                     "User does not have permission to access this resource",
                 );
             }
+
             next();
         } catch (err: any) {
             next(err);

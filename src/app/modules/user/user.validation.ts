@@ -1,47 +1,89 @@
 import z from "zod";
-import { Gender } from "../../../generated/prisma/enums";
+import { Gender, UserRole } from "../../../generated/prisma/enums";
 
 export const doctorSchema = z.object({
     password: z
-        .string("password is required")
-        .min(6, "Password must be at least 6 characters long"),
+        .string("Password is required.")
+        .min(6, "Password must be at least 6 characters long."),
+
     doctor: z.object({
         name: z
-            .string("name is required and must be string")
-            .min(3, "Name must be at least 3 characters long")
-            .max(50, "Name must be at most 50 characters long"),
-        email: z.email("Invalid email").transform((val) => val.toLowerCase()),
-        contactNumber: z
-            .string("contactNumber is required")
-            .min(11, "contactNumber must be at least 11 characters long")
-            .max(14, "contactNumber must be at most 14 characters long"),
+            .string("Name is required.")
+            .min(3, "Name must be at least 3 characters long.")
+            .max(50, "Name cannot exceed 50 characters."),
 
-        address: z.string("address is required").optional(),
-        registrationNumber: z.string("Registration number is required"),
+        email: z
+            .email("Please enter a valid email address.")
+            .transform((val) => val.toLowerCase()),
+
+        contactNumber: z
+            .string("Contact number is required.")
+            .min(11, "Contact number must be at least 11 digits.")
+            .max(14, "Contact number cannot exceed 14 digits."),
+
+        address: z.string().optional(),
+
+        registrationNumber: z.string("Registration number is required."),
+
         experience: z
-            .int("Experience must be an integer")
-            .nonnegative("Experience must be positive number"),
+            .int("Experience must be a whole number.")
+            .nonnegative("Experience cannot be negative."),
 
         gender: z.enum(
             [Gender.MALE, Gender.FEMALE],
-            "Gender must be either 'MALE' or 'FEMALE'",
+            "Gender must be either 'MALE' or 'FEMALE'.",
         ),
+
         appointmentFee: z
-            .number("appointmentFee must be a number")
-            .nonnegative("appointmentFee must be positive number"),
+            .number("Appointment fee must be a valid number.")
+            .nonnegative("Appointment fee cannot be negative."),
+
         qualification: z
-            .string("qualification is required")
-            .min(3, "qualification must be at least 3 characters long")
-            .max(50, "qualification must be at most 50 characters long"),
+            .string("Qualification is required.")
+            .min(3, "Qualification must be at least 3 characters long.")
+            .max(50, "Qualification cannot exceed 50 characters."),
+
         currentWorkplace: z
-            .string("currentworking place is required")
-            .min(3, "currentworking place must be at least 3 characters long")
-            .max(50, "currentworking place must be at most 50 characters long"),
+            .string("Current workplace is required.")
+            .min(3, "Current workplace must be at least 3 characters long.")
+            .max(50, "Current workplace cannot exceed 50 characters."),
 
         designation: z
-            .string("designation is required")
-            .min(3, "designation must be at least 3 characters long")
-            .max(50, "designation must be at most 50 characters long"),
+            .string("Designation is required.")
+            .min(3, "Designation must be at least 3 characters long.")
+            .max(50, "Designation cannot exceed 50 characters."),
     }),
-    specialties: z.array(z.uuid()).min(1, "At least one specialty is required"),
+
+    specialties: z
+        .array(z.uuid("Each specialty must be a valid UUID."))
+        .min(1, "Please select at least one specialty."),
+});
+
+export const adminSchema = z.object({
+    password: z
+        .string("Password is required.")
+        .min(6, "Password must be at least 6 characters long."),
+
+    admin: z.object({
+        name: z
+            .string("Name is required.")
+            .min(3, "Name must be at least 3 characters long.")
+            .max(50, "Name cannot exceed 50 characters."),
+
+        email: z
+            .email("Please enter a valid email address.")
+            .transform((val) => val.toLowerCase()),
+
+        contactNumber: z
+            .string("Contact number is required.")
+            .min(11, "Contact number must be at least 11 digits.")
+            .max(14, "Contact number cannot exceed 14 digits."),
+
+        profilePhoto: z.string().optional(),
+        address: z.string().optional(),
+    }),
+    role: z.enum(
+        [UserRole.ADMIN, UserRole.SUPER_ADMIN],
+        "Role must be either 'ADMIN' or 'SUPER_ADMIN'.",
+    ),
 });
