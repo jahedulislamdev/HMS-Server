@@ -4,6 +4,7 @@ import {
     ISpecialtyUpdatePayload,
 } from "./specialty.interface";
 
+// create speciality
 const createSpecialty = async (payload: ISpecialtyCreatePayload) => {
     // check if specialty already exists
     const specialtyExist = await prisma.specialty.findUnique({
@@ -38,12 +39,42 @@ const updateSpecialty = async ({
     id: string;
     data: ISpecialtyUpdatePayload;
 }) => {
+    // check if specialty exists
+    const specialtyExist = await prisma.specialty.findUnique({
+        where: { id },
+    });
+
+    if (!specialtyExist) {
+        throw new Error("Specialty you want to update is not found");
+    }
+
+    // check if specialty is being updated
+    if (data.title) {
+        const specialtyExist = await prisma.specialty.findUnique({
+            where: { title: data.title },
+        });
+        if (specialtyExist) {
+            throw new Error(
+                "Specialty already exists, Can't update duplicate specialty using the existing specialty name",
+            );
+        }
+    }
     return await prisma.specialty.update({ where: { id }, data });
 };
 
 // delete speciality
 const deleteSpecialty = async ({ id }: { id: string }) => {
-    return await prisma.specialty.delete({ where: { id } });
+    // check if specialty exists
+    const specialtyExist = await prisma.specialty.findUnique({
+        where: { id },
+    });
+    if (!specialtyExist) {
+        throw new Error("Specialty you want to delete is not found");
+    }
+    return await prisma.specialty.update({
+        where: { id },
+        data: { isDeleted: true, deletedAt: new Date() },
+    });
 };
 
 export const specialtyService = {
