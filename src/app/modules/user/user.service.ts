@@ -51,7 +51,7 @@ const createDoctor = async ({
 
     //* create doctor and specialties
     try {
-        return await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx) => {
             //! check for unique registration number
             const regNumExist = await tx.doctor.findUnique({
                 where: {

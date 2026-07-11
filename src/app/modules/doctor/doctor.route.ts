@@ -7,13 +7,18 @@ import { UserRole } from "../../../generated/prisma/enums";
 
 const router = Router();
 
-router.get("/", checkAuth(UserRole.PATIENT), doctorController.getDoctors);
+router.get("/", doctorController.getDoctors);
 router.get("/:id", doctorController.getDoctorById);
-router.put(
+router.patch(
     "/:id",
     validateRequest(updateDoctorSchema),
+    checkAuth(UserRole.SUPER_ADMIN, UserRole.DOCTOR, UserRole.ADMIN),
     doctorController.updateDoctor,
 );
-router.delete("/:id", doctorController.deleteDoctor);
+router.delete(
+    "/:id",
+    checkAuth(UserRole.SUPER_ADMIN, UserRole.DOCTOR, UserRole.ADMIN),
+    doctorController.deleteDoctor,
+);
 
 export const doctorRoutes = router;
