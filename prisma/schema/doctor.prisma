@@ -1,29 +1,38 @@
 model Doctor {
-  id                 String             @id @default(uuid())
-  name               String
-  email              String             
-  profilePhoto       String?
-  contactNumber      String?
-  address            String?
-  registrationNumber String             @unique
-  experience         Int                @default(0)
-  gender             Gender             @default(MALE)
-  appointmentFee     Float
-  qualification      String
-  currentWorkplace   String
-  designation        String
-  avgerageRating     Float              @default(0.0)
-  isDeleted          Boolean            @default(false)
-  deletedAt          DateTime?
-  dateOfBirth        DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  // relation
-  userId             String             @unique
-  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  specialties          DoctorSpeciality[]
+  id String @id @default(uuid(7))
 
-  @@index([contactNumber], name: "idx_doctor_contactno")
-  @@index([name], name: "idx_doctor_name")
+  name          String
+  email         String    @unique
+  profilePhoto  String?
+  contactNumber String?
+  address       String?
+  isDeleted     Boolean   @default(false)
+  deletedAt     DateTime?
+
+  registrationNumber  String @unique
+  experience          Int    @default(0)
+  gender              Gender
+  appointmentFee      Float
+  qualification       String
+  currentWorkingPlace String
+  designation         String
+  averageRating       Float  @default(0.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //relations
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  specialties     DoctorSpeciality[]
+  appointments    Appointment[]
+  prescriptions   Prescription[]
+  reviews         Review[]
+  doctorSchedules DoctorSchedules[]
+
+  @@index([email], name: "idx_doctor_email")
+  @@index([isDeleted], name: "idx_doctor_isDeleted")
   @@map("doctor")
 }

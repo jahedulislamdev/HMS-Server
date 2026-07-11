@@ -1,4 +1,4 @@
-import { UserRole, UserStatus } from "../../../generated/prisma/enums";
+import { UserRole } from "../../../generated/prisma/enums";
 import { IUpdateDoctorPayload } from "./doctor.iterface";
 import { StatusCodes } from "http-status-codes";
 import AppError from "../../helper/AppError";
@@ -142,7 +142,13 @@ const deleteDoctor = async ({
     if (!doctor) {
         throw new AppError(StatusCodes.NOT_FOUND, "Doctor not found");
     }
-
+    // check if doctor is deleted
+    if (doctor.isDeleted) {
+        throw new AppError(
+            StatusCodes.BAD_REQUEST,
+            "Doctor is already deleted",
+        );
+    }
     const isOwner = doctor.userId === userId;
     const isAdmin = role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
 
@@ -153,25 +159,12 @@ const deleteDoctor = async ({
         );
     }
 
-    //! soft delete doctor
+    // soft delete doctor
     return await prisma.$transaction(async (tx) => {
+        // Mark doctor as deleted , user delete as a doctor but not as user
         await tx.doctor.update({
             where: { id },
             data: { isDeleted: true, deletedAt: new Date() },
-        });
-        await tx.user.update({
-            where: { id: userId },
-            data: {
-                isdeleted: true,
-                status: UserStatus.DELETED,
-                deletedAt: new Date(),
-            },
-        });
-        await tx.session.deleteMany({
-            where: { userId: doctor.userId },
-        });
-        await tx.account.deleteMany({
-            where: { userId: doctor.userId },
         });
         return getDoctorById({ id });
     });
