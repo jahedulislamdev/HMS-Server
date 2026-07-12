@@ -1,14 +1,14 @@
 import { ILoginUserPayload, IRegisterPatientPayload } from "./auth.interface";
-import { StatusCodes } from "http-status-codes";
 import { UserStatus } from "../../../generated/prisma/enums";
-import AppError from "../../helper/AppError";
-import { auth } from "../../lib/auth";
-import { prisma } from "../../lib/prisma";
-import { authTokens } from "../../utils/token";
-import { jwtUtils } from "../../utils/jwt";
-import { envVars } from "./../../../config/env";
-import { JwtPayload } from "jsonwebtoken";
 import jwtPayload from "./../../helper/jwtPayload";
+import { envVars } from "./../../../config/env";
+import { StatusCodes } from "http-status-codes";
+import { authTokens } from "../../utils/token";
+import AppError from "../../helper/AppError";
+import { jwtUtils } from "../../utils/jwt";
+import { prisma } from "../../lib/prisma";
+import { JwtPayload } from "jsonwebtoken";
+import { auth } from "../../lib/auth";
 
 //* Register Patient (user will automatically login after register)
 const registerPatient = async (payload: IRegisterPatientPayload) => {
