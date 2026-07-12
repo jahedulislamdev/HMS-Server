@@ -1,15 +1,14 @@
+import { ILoginUserPayload, IRegisterPatientPayload } from "./auth.interface";
 import { StatusCodes } from "http-status-codes";
 import { UserStatus } from "../../../generated/prisma/enums";
 import AppError from "../../helper/AppError";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { authTokens } from "../../utils/token";
-
-interface IRegisterPatientPayload {
-    name: string;
-    email: string;
-    password: string;
-}
+import { jwtUtils } from "../../utils/jwt";
+import { envVars } from "./../../../config/env";
+import { JwtPayload } from "jsonwebtoken";
+import jwtPayload from "./../../helper/jwtPayload";
 
 //* Register Patient (user will automatically login after register)
 const registerPatient = async (payload: IRegisterPatientPayload) => {
@@ -42,24 +41,10 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
         });
 
         const accessToken = authTokens.getAccessToken({
-            payload: {
-                id: data.user.id,
-                email: data.user.email,
-                role: data.user.role,
-                emailVerified: data.user.emailVerified,
-                isDeleted: data.user.isDeleted,
-                status: data.user.status,
-            },
+            payload: jwtPayload({ data }),
         });
         const refreshToken = authTokens.getRefreshToken({
-            payload: {
-                id: data.user.id,
-                email: data.user.email,
-                role: data.user.role,
-                emailVerified: data.user.emailVerified,
-                isDeleted: data.user.isDeleted,
-                status: data.user.status,
-            },
+            payload: jwtPayload({ data }),
         });
         return {
             ...data,
@@ -75,12 +60,6 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
         throw err;
     }
 };
-
-interface ILoginUserPayload {
-    email: string;
-    password: string;
-    rememberMe?: boolean;
-}
 
 //* Login Patient
 const loginPatient = async (payload: ILoginUserPayload) => {
@@ -98,27 +77,63 @@ const loginPatient = async (payload: ILoginUserPayload) => {
         throw new AppError(StatusCodes.NOT_FOUND, "user is deleted");
     }
     const accessToken = authTokens.getAccessToken({
-        payload: {
-            id: data.user.id,
-            email: data.user.email,
-            role: data.user.role,
-            emailVerified: data.user.emailVerified,
-            isDeleted: data.user.isDeleted,
-            status: data.user.status,
-        },
+        payload: jwtPayload({ data }),
     });
     const refreshToken = authTokens.getRefreshToken({
-        payload: {
-            id: data.user.id,
-            email: data.user.email,
-            role: data.user.role,
-            emailVerified: data.user.emailVerified,
-            isDeleted: data.user.isDeleted,
-            status: data.user.status,
-        },
+        payload: jwtPayload({ data }),
     });
 
     return { ...data, accessToken, refreshToken };
 };
 
-export const authService = { registerPatient, loginPatient };
+//* get new token using refresh token
+const getNewToken = async ({
+    refreshToken,
+    sessionToken,
+}: {
+    refreshToken: string;
+    sessionToken: string;
+}) => {
+    // check session token
+    const isSessionTokenExist = await prisma.session.findUnique({
+        where: { token: sessionToken },
+        include: { user: true },
+    });
+
+    if (!isSessionTokenExist) {
+        throw new AppError(StatusCodes.UNAUTHORIZED, "Invalid session token");
+    }
+
+    // verify refresh token
+    const verifiedRefreshToken = jwtUtils.verifyToken({
+        secret: envVars.REFRESH_TOKEN_SECRET,
+        token: refreshToken,
+    });
+    if (!verifiedRefreshToken) {
+        throw new AppError(StatusCodes.UNAUTHORIZED, "Invalid refress token");
+    }
+
+    const data = verifiedRefreshToken.data as JwtPayload;
+    const newAccessToken = authTokens.getAccessToken({
+        payload: jwtPayload({ data }),
+    });
+    const newRefreshToken = authTokens.getRefreshToken({
+        payload: jwtPayload({ data }),
+    });
+    const { token } = await prisma.session.update({
+        where: { token: sessionToken },
+        data: {
+            token: sessionToken,
+            expiresAt: new Date(Date.now() + 60 * 60 * 60 * 24 * 1000),
+            updatedAt: new Date(),
+        },
+    });
+
+    return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        sessionToken: token,
+    };
+};
+
+export const authService = { registerPatient, loginPatient, getNewToken };
