@@ -10,7 +10,7 @@ const getAdmins = async () => {
 };
 
 //* get admin by id
-const getAdminById = async (id: string) => {
+const getAdminById = async ({ id }: { id: string }) => {
     const isAdminExist = await prisma.admin.findUnique({ where: { id } });
     if (!isAdminExist) {
         throw new AppError(
@@ -66,17 +66,24 @@ const deleteAdmin = async ({ id, userId }: { id: string; userId: string }) => {
             where: { id },
             data: { isDeleted: true, deletedAt: new Date() },
         });
-        await tx.user.update({
-            where: { id: userId },
-            data: { isDeleted: true, status: UserStatus.DELETED },
-        });
-        await tx.session.deleteMany({
-            where: { userId: isAdminExist.userId },
-        });
-        await tx.account.deleteMany({
-            where: { userId: isAdminExist.userId },
-        });
-        return getAdminById(id);
+        await Promise.all([
+            tx.user.update({
+                where: { id: userId },
+                data: {
+                    isDeleted: true,
+                    status: UserStatus.DELETED,
+                    deletedAt: new Date(),
+                },
+            }),
+            tx.session.deleteMany({
+                where: { userId: isAdminExist.userId },
+            }),
+            tx.account.deleteMany({
+                where: { userId: isAdminExist.userId },
+            }),
+        ]);
+
+        return { id };
     });
 };
 

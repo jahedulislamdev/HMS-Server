@@ -19,5 +19,15 @@ router.post(
     checkAuth(UserRole.SUPER_ADMIN),
     userController.createDoctor,
 );
+router.get(
+    "/me",
+    checkAuth(
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.DOCTOR,
+        UserRole.PATIENT,
+    ),
+    userController.getMe,
+);
 
 export const userRoutes = router;
