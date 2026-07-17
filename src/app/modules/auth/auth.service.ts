@@ -114,6 +114,8 @@ const getNewToken = async ({
     }
 
     const data = verifiedRefreshToken.data as JwtPayload;
+    // console.log({ data });
+
     const newAccessToken = authTokens.getAccessToken({
         payload: jwtPayload({ data }),
     });
