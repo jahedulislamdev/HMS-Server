@@ -6,9 +6,10 @@ import { StatusCodes } from "http-status-codes";
 import { authTokens } from "../../utils/token";
 import AppError from "../../helper/AppError";
 
-const registerPatient = catchAsync(async (req: Request, res: Response) => {
-    const result = await authService.registerPatient(req.body);
-    const { accessToken, refreshToken, token, ...rest } = result;
+const registerUser = catchAsync(async (req: Request, res: Response) => {
+    const result = await authService.registerUser(req.body);
+    const { accessToken, refreshToken, token } = result;
+
     authTokens.setAccessTokenCookie({ res, token: accessToken });
     authTokens.setRefreshTokenCookie({ res, token: refreshToken });
     authTokens.setBetterAuthSessionTokenCookie({ res, token: token! });
@@ -16,12 +17,13 @@ const registerPatient = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: StatusCodes.CREATED,
         message: "patient register successfully!",
-        data: { accessToken, refreshToken, token, ...rest },
+        data: result,
     });
 });
-const loginPatient = catchAsync(async (req: Request, res: Response) => {
-    const result = await authService.loginPatient(req.body);
-    const { accessToken, refreshToken, token, ...rest } = result;
+const loginUser = catchAsync(async (req: Request, res: Response) => {
+    const result = await authService.loginUser(req.body);
+    const { accessToken, refreshToken, token } = result;
+
     authTokens.setAccessTokenCookie({ res, token: accessToken });
     authTokens.setRefreshTokenCookie({ res, token: refreshToken });
     authTokens.setBetterAuthSessionTokenCookie({ res, token });
@@ -29,7 +31,7 @@ const loginPatient = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         message: "patient login successfully!",
-        data: { accessToken, refreshToken, token, ...rest },
+        data: result,
     });
 });
 const getNewToken = catchAsync(async (req: Request, res: Response) => {
@@ -59,5 +61,31 @@ const getNewToken = catchAsync(async (req: Request, res: Response) => {
         data: result,
     });
 });
+const changePassword = catchAsync(async (req: Request, res: Response) => {
+    const sessionToken = req.cookies["better-auth.session_token"];
 
-export const authController = { registerPatient, loginPatient, getNewToken };
+    // token check
+    if (!sessionToken) {
+        throw new AppError(StatusCodes.BAD_REQUEST, "session token is missing");
+    }
+    const result = await authService.changePassword({
+        payload: req.body,
+        sessionToken,
+    });
+    authTokens.setAccessTokenCookie({ res, token: result.accessToken });
+    authTokens.setRefreshTokenCookie({ res, token: result.refreshToken });
+    authTokens.setBetterAuthSessionTokenCookie({ res, token: result.token! });
+
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        message: "password changed successfully!",
+        data: result,
+    });
+});
+
+export const authController = {
+    registerUser,
+    loginUser,
+    getNewToken,
+    changePassword,
+};

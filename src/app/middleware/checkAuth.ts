@@ -94,8 +94,8 @@ export default function checkAuth(...authRoles: UserRole[]) {
                 );
             }
             const verrifyAccessToken = jwtUtils.verifyToken({
-                token: accessToken,
                 secret: envVars.ACCESS_TOKEN_SECRET,
+                token: accessToken,
             });
             if (!verrifyAccessToken.success) {
                 throw new AppError(
@@ -103,6 +103,12 @@ export default function checkAuth(...authRoles: UserRole[]) {
                     "Unauthorized access: Invalid access token",
                 );
             }
+            // console.log({ authRoles });
+            // console.log({
+            //     verifyToken: verrifyAccessToken.data,
+            //     userRole: verrifyAccessToken.data!.role,
+            // });
+
             if (
                 authRoles.length > 0 &&
                 !authRoles.includes(verrifyAccessToken.data!.role as UserRole)

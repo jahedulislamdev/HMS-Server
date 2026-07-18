@@ -1,4 +1,8 @@
-import { ILoginUserPayload, IRegisterPatientPayload } from "./auth.interface";
+import {
+    IChangePasswordPayload,
+    ILoginUserPayload,
+    IRegisterPatientPayload,
+} from "./auth.interface";
 import { UserStatus } from "../../../generated/prisma/enums";
 import jwtPayload from "./../../helper/jwtPayload";
 import { envVars } from "./../../../config/env";
@@ -11,7 +15,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { auth } from "../../lib/auth";
 
 //* Register Patient (user will automatically login after register)
-const registerPatient = async (payload: IRegisterPatientPayload) => {
+const registerUser = async (payload: IRegisterPatientPayload) => {
     const { name, email, password } = payload;
     //* create user via better auth build in function
     const data = await auth.api.signUpEmail({
@@ -62,7 +66,7 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
 };
 
 //* Login Patient
-const loginPatient = async (payload: ILoginUserPayload) => {
+const loginUser = async (payload: ILoginUserPayload) => {
     const data = await auth.api.signInEmail({
         body: {
             email: payload.email,
@@ -138,4 +142,47 @@ const getNewToken = async ({
     };
 };
 
-export const authService = { registerPatient, loginPatient, getNewToken };
+//* change password
+const changePassword = async ({
+    payload,
+    sessionToken,
+}: {
+    payload: IChangePasswordPayload;
+    sessionToken: string;
+}) => {
+    const session = await auth.api.getSession({
+        headers: new Headers({
+            Authorization: `Bearer ${sessionToken}`,
+        }),
+    });
+    if (!session) {
+        throw new AppError(StatusCodes.UNAUTHORIZED, "Invalid session token");
+    }
+    const { currentPassword, newPassword } = payload;
+    const result = await auth.api.changePassword({
+        body: { currentPassword, newPassword, revokeOtherSessions: true },
+        headers: new Headers({
+            Authorization: `Bearer ${sessionToken}`,
+        }),
+    });
+
+    // reset access & refresh token
+    const accessToken = authTokens.getAccessToken({
+        payload: jwtPayload({ data: session }),
+    });
+    const refreshToken = authTokens.getRefreshToken({
+        payload: jwtPayload({ data: session }),
+    });
+
+    return { ...result, accessToken, refreshToken };
+};
+
+//* logout user
+const logoutUser = async () => {};
+export const authService = {
+    registerUser,
+    loginUser,
+    getNewToken,
+    changePassword,
+    logoutUser,
+};
