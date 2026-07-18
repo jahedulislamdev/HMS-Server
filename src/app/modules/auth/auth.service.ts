@@ -178,11 +178,26 @@ const changePassword = async ({
 };
 
 //* logout user
-const logoutUser = async () => {};
+const logoutUser = async ({ sessionToken }: { sessionToken: string }) => {
+    return await auth.api.signOut({
+        headers: new Headers({
+            Authorization: `Bearer ${sessionToken}`,
+        }),
+    });
+};
+//* logout from all device except current user
+const logoutAll = async ({ sessionToken }: { sessionToken: string }) => {
+    return await auth.api.revokeOtherSessions({
+        headers: new Headers({
+            Authorization: `Bearer ${sessionToken}`,
+        }),
+    });
+};
 export const authService = {
     registerUser,
     loginUser,
     getNewToken,
     changePassword,
     logoutUser,
+    logoutAll,
 };

@@ -26,7 +26,17 @@ router.post(
         UserRole.SUPER_ADMIN,
         UserRole.PATIENT,
     ),
-    authController.changePassword,
+    authController.logoutUser,
+);
+router.post(
+    "/logout-all",
+    checkAuth(
+        UserRole.ADMIN,
+        UserRole.DOCTOR,
+        UserRole.SUPER_ADMIN,
+        UserRole.PATIENT,
+    ),
+    authController.logoutAll,
 );
 
 export const authRoutes = router;
