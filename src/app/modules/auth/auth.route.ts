@@ -2,10 +2,16 @@ import { Router } from "express";
 import { authController } from "./auth.controller";
 import checkAuth from "../../middleware/checkAuth";
 import { UserRole } from "../../../generated/prisma/enums";
+import { validateRequest } from "../../middleware/validateRequest";
+import { patientSchema } from "./auth.validation";
 
 const router = Router();
 
-router.post("/register", authController.registerUser);
+router.post(
+    "/register",
+    validateRequest(patientSchema),
+    authController.registerUser,
+);
 router.post("/login", authController.loginUser);
 router.post("/refresh-token", authController.getNewToken);
 router.post(
@@ -38,5 +44,5 @@ router.post(
     ),
     authController.logoutAll,
 );
-
+router.post("/verify-email", authController.verifyEmail);
 export const authRoutes = router;

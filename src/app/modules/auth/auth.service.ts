@@ -17,6 +17,15 @@ import { auth } from "../../lib/auth";
 //* Register Patient (user will automatically login after register)
 const registerUser = async (payload: IRegisterPatientPayload) => {
     const { name, email, password } = payload;
+
+    const userExist = await prisma.user.findUnique({
+        where: {
+            email,
+        },
+    });
+    if (userExist) {
+        throw new AppError(StatusCodes.CONFLICT, "Email already registered");
+    }
     //* create user via better auth build in function
     const data = await auth.api.signUpEmail({
         body: {
@@ -25,23 +34,15 @@ const registerUser = async (payload: IRegisterPatientPayload) => {
             password,
         },
     });
-    if (!data.user) {
-        throw new AppError(
-            StatusCodes.BAD_REQUEST,
-            "Failed to register patient",
-        );
-    }
 
     //* create patient profile by using transection after signup comteated
     try {
-        const patient = await prisma.$transaction(async (tx) => {
-            return await tx.patient.create({
-                data: {
-                    userId: data.user.id,
-                    name: payload.name,
-                    email: payload.email,
-                },
-            });
+        const patient = await prisma.patient.create({
+            data: {
+                userId: data.user.id,
+                name: payload.name,
+                email: payload.email,
+            },
         });
 
         const accessToken = authTokens.getAccessToken({
@@ -58,8 +59,8 @@ const registerUser = async (payload: IRegisterPatientPayload) => {
             refreshToken,
         };
     } catch (err) {
-        console.log("transection error :", err);
-        //! delete user if patient transection failed
+        console.error("Patient creation failed:", err);
+        //! delete user if patient creation failed
         await prisma.user.delete({ where: { id: data.user.id } });
         throw err;
     }
@@ -193,6 +194,22 @@ const logoutAll = async ({ sessionToken }: { sessionToken: string }) => {
         }),
     });
 };
+const verifyEmail = async ({ email, otp }: { email: string; otp: string }) => {
+    const result = await auth.api.verifyEmailOTP({
+        body: {
+            email,
+            otp,
+        },
+    });
+    if (result.status && !result.user.emailVerified) {
+        await prisma.user.update({
+            where: { email },
+            data: {
+                emailVerified: true,
+            },
+        });
+    }
+};
 export const authService = {
     registerUser,
     loginUser,
@@ -200,4 +217,5 @@ export const authService = {
     changePassword,
     logoutUser,
     logoutAll,
+    verifyEmail,
 };
