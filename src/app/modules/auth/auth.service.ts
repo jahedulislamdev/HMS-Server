@@ -186,6 +186,7 @@ const logoutUser = async ({ sessionToken }: { sessionToken: string }) => {
         }),
     });
 };
+
 //* logout from all device except current user
 const logoutAll = async ({ sessionToken }: { sessionToken: string }) => {
     return await auth.api.revokeOtherSessions({
@@ -194,6 +195,8 @@ const logoutAll = async ({ sessionToken }: { sessionToken: string }) => {
         }),
     });
 };
+
+//* verificaiton email
 const verifyEmail = async ({ email, otp }: { email: string; otp: string }) => {
     const result = await auth.api.verifyEmailOTP({
         body: {
@@ -210,6 +213,7 @@ const verifyEmail = async ({ email, otp }: { email: string; otp: string }) => {
         });
     }
 };
+
 export const authService = {
     registerUser,
     loginUser,

@@ -5,6 +5,7 @@ import AppError from "../helper/AppError";
 import { StatusCodes } from "http-status-codes";
 import path from "node:path";
 import ejs from "ejs";
+
 const transporter = nodemailer.createTransport({
     host: envVars.EMAIL_SENDER.SMTP_HOST,
     secure: true,
@@ -49,7 +50,7 @@ export const sendEmail = async ({
                 contentType: att.contentType,
             })),
         });
-        console.log(`email send to ${to} : ${info.messageId}`);
+        console.log(`verification email send to ${to} : ${info.messageId}`);
     } catch (err: any) {
         console.log("sending error..", err.message);
         throw new AppError(

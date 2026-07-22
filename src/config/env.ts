@@ -73,11 +73,11 @@ const loadEnvVariables = (): EnvConfig => {
         BETTER_AUTH_TOKEN_COOKIE_CACHE_MAX_AGE: process.env
             .BETTER_AUTH_TOKEN_COOKIE_CACHE_MAX_AGE as string,
         EMAIL_SENDER: {
-            SMTP_USER: process.env.EMAIL_SENDER_SMTM_USER as string,
-            SMTP_PASS: process.env.EMAIL_SENDER_SMTM_USER as string,
-            SMTP_PORT: process.env.EMAIL_SENDER_SMTM_USER as string,
-            SMTP_HOST: process.env.EMAIL_SENDER_SMTM_USER as string,
-            SMTP_FROM: process.env.EMAIL_SENDER_SMTM_USER as string,
+            SMTP_USER: process.env.EMAIL_SENDER_SMTP_USER as string,
+            SMTP_PASS: process.env.EMAIL_SENDER_SMTP_PASS as string,
+            SMTP_PORT: process.env.EMAIL_SENDER_SMTP_PORT as string,
+            SMTP_HOST: process.env.EMAIL_SENDER_SMTP_HOST as string,
+            SMTP_FROM: process.env.EMAIL_SENDER_SMTP_FROM as string,
         },
     };
 };

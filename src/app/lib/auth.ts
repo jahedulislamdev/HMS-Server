@@ -6,6 +6,7 @@ import { bearer, emailOTP } from "better-auth/plugins";
 import { sendEmail } from "../utils/email";
 
 const oneDayInSeconds = 60 * 60 * 60 * 24;
+const OTP_EXPIRES_IN = 2 * 60;
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
@@ -58,6 +59,7 @@ export const auth = betterAuth({
                     const user = await prisma.user.findUnique({
                         where: { email },
                     });
+
                     if (user && !user.emailVerified) {
                         await sendEmail({
                             subject: "Verify your email",
@@ -66,12 +68,13 @@ export const auth = betterAuth({
                             templateData: {
                                 name: user.name,
                                 otp,
+                                expiryMinutes: OTP_EXPIRES_IN / 60,
                             },
                         });
                     }
                 }
             },
-            expiresIn: 2 * 60,
+            expiresIn: OTP_EXPIRES_IN,
             otpLength: 6,
         }),
     ],
