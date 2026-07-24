@@ -72,6 +72,22 @@ export const auth = betterAuth({
                             },
                         });
                     }
+                } else if (type === "forget-password") {
+                    const user = await prisma.user.findUnique({
+                        where: { email },
+                    });
+                    if (user) {
+                        sendEmail({
+                            subject: "Password reset otp",
+                            templateName: "otp",
+                            to: email,
+                            templateData: {
+                                name: user.name,
+                                otp,
+                                expiryMinutes: OTP_EXPIRES_IN / 60,
+                            },
+                        });
+                    }
                 }
             },
             expiresIn: OTP_EXPIRES_IN,

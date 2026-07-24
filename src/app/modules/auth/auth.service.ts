@@ -13,6 +13,7 @@ import { jwtUtils } from "../../utils/jwt";
 import { prisma } from "../../lib/prisma";
 import { JwtPayload } from "jsonwebtoken";
 import { auth } from "../../lib/auth";
+import { validateResetPasswordUser } from "./../../helper/validateResetPasswordUser";
 
 //* Register Patient (user will automatically login after register)
 const registerUser = async (payload: IRegisterPatientPayload) => {
@@ -166,6 +167,16 @@ const changePassword = async ({
             Authorization: `Bearer ${sessionToken}`,
         }),
     });
+    if (session.user.needPasswordChange) {
+        await prisma.user.update({
+            where: {
+                id: session.user.id,
+            },
+            data: {
+                needPasswordChange: false,
+            },
+        });
+    }
 
     // reset access & refresh token
     const accessToken = authTokens.getAccessToken({
@@ -214,6 +225,32 @@ const verifyEmail = async ({ email, otp }: { email: string; otp: string }) => {
     }
 };
 
+//* forget password
+const forgetPassword = async ({ email }: { email: string }) => {
+    await validateResetPasswordUser(email);
+    await auth.api.requestPasswordResetEmailOTP({ body: { email } });
+};
+
+//* reset password
+const resetPassword = async ({
+    email,
+    otp,
+    newPassword,
+}: {
+    email: string;
+    otp: string;
+    newPassword: string;
+}) => {
+    const user = await validateResetPasswordUser(email);
+    // console.log({ email, otp, newPassword });
+    await auth.api.resetPasswordEmailOTP({
+        body: { email, otp, password: newPassword },
+    });
+
+    //! we delete all of login session of user after reset password
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+};
+
 export const authService = {
     registerUser,
     loginUser,
@@ -222,4 +259,6 @@ export const authService = {
     logoutUser,
     logoutAll,
     verifyEmail,
+    forgetPassword,
+    resetPassword,
 };

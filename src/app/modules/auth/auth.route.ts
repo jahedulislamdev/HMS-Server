@@ -3,7 +3,11 @@ import { authController } from "./auth.controller";
 import checkAuth from "../../middleware/checkAuth";
 import { UserRole } from "../../../generated/prisma/enums";
 import { validateRequest } from "../../middleware/validateRequest";
-import { patientSchema } from "./auth.validation";
+import {
+    forgetPasswordSchema,
+    patientSchema,
+    resetPasswordSchema,
+} from "./auth.validation";
 
 const router = Router();
 
@@ -45,4 +49,15 @@ router.post(
     authController.logoutAll,
 );
 router.post("/verify-email", authController.verifyEmail);
+router.post(
+    "/forget-password",
+    validateRequest(forgetPasswordSchema),
+    authController.forgetPassword,
+);
+router.post(
+    "/reset-password",
+    validateRequest(resetPasswordSchema),
+    authController.resetPassword,
+);
+
 export const authRoutes = router;
