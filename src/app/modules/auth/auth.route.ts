@@ -60,7 +60,7 @@ router.post(
     authController.resetPassword,
 );
 router.get("/login/google", authController.loginWithGoogle);
-router.get("/login/success", authController.googleLoginSuccess);
+router.get("/google/success", authController.googleLoginSuccess);
 router.get("/login/error", authController.handleOAuthError);
 
 export const authRoutes = router;

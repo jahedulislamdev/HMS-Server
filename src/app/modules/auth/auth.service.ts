@@ -277,10 +277,10 @@ const googleLoginSucces = async ({ session }: { session: ISession }) => {
         });
     }
     const accessToken = authTokens.getAccessToken({
-        payload: jwtPayload({ data: session.user }),
+        payload: jwtPayload({ data: session }),
     });
     const refreshToken = authTokens.getRefreshToken({
-        payload: jwtPayload({ data: session.user }),
+        payload: jwtPayload({ data: session }),
     });
     return { accessToken, refreshToken };
 };

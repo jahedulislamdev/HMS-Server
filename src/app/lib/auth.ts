@@ -123,6 +123,14 @@ export const auth = betterAuth({
             maxAge: oneDayInSeconds,
         },
     },
+    rateLimit: {
+        enabled: true,
+        window: 60,
+        max: 10,
+    },
+    // redirectURLs: {
+    //     signIn: `${envVars.BETTER_AUTH_URL}/api/v1/auth/google/success`,
+    // },
     advanced: {
         useSecureCookies: false,
         cookies: {
