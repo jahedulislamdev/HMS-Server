@@ -15,6 +15,7 @@ import { prisma } from "../../lib/prisma";
 import { JwtPayload } from "jsonwebtoken";
 import { auth } from "../../lib/auth";
 import { validateResetPasswordUser } from "./../../helper/validateResetPasswordUser";
+import { ensureCredentialAccount } from "../../helper/ensureCredentialAccount";
 
 //* Register Patient (user will automatically login after register)
 const registerUser = async (payload: IRegisterPatientPayload) => {
@@ -161,6 +162,9 @@ const changePassword = async ({
     if (!session) {
         throw new AppError(StatusCodes.UNAUTHORIZED, "Invalid session token");
     }
+    //* bloked social logged in user password change
+    await ensureCredentialAccount(session.user.id);
+
     const { currentPassword, newPassword } = payload;
     const result = await auth.api.changePassword({
         body: { currentPassword, newPassword, revokeOtherSessions: true },
@@ -228,6 +232,16 @@ const verifyEmail = async ({ email, otp }: { email: string; otp: string }) => {
 
 //* forget password
 const forgetPassword = async ({ email }: { email: string }) => {
+    const user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+    });
+    if (!user) {
+        throw new AppError(StatusCodes.NOT_FOUND, "user not found");
+    }
+    //* bloked social logged in user password change
+    await ensureCredentialAccount(user.id);
+
     await validateResetPasswordUser(email);
     await auth.api.requestPasswordResetEmailOTP({ body: { email } });
 };
@@ -244,6 +258,10 @@ const resetPassword = async ({
 }) => {
     const user = await validateResetPasswordUser(email);
     // console.log({ email, otp, newPassword });
+
+    //* bloked social logged in user password change
+    await ensureCredentialAccount(user.id);
+
     await auth.api.resetPasswordEmailOTP({
         body: { email, otp, password: newPassword },
     });
