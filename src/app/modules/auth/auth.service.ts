@@ -2,6 +2,7 @@ import {
     IChangePasswordPayload,
     ILoginUserPayload,
     IRegisterPatientPayload,
+    ISession,
 } from "./auth.interface";
 import { UserStatus } from "../../../generated/prisma/enums";
 import jwtPayload from "./../../helper/jwtPayload";
@@ -246,11 +247,43 @@ const resetPassword = async ({
     await auth.api.resetPasswordEmailOTP({
         body: { email, otp, password: newPassword },
     });
+    if (user.needPasswordChange) {
+        await prisma.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                needPasswordChange: false,
+            },
+        });
+    }
 
     //! we delete all of login session of user after reset password
     await prisma.session.deleteMany({ where: { userId: user.id } });
 };
 
+//* google login callback
+const googleLoginSucces = async ({ session }: { session: ISession }) => {
+    const isPatientExist = await prisma.patient.findUnique({
+        where: { userId: session?.user.id },
+    });
+    if (!isPatientExist) {
+        await prisma.patient.create({
+            data: {
+                userId: session?.user.id,
+                name: session?.user.name,
+                email: session?.user.email,
+            },
+        });
+    }
+    const accessToken = authTokens.getAccessToken({
+        payload: jwtPayload({ data: session.user }),
+    });
+    const refreshToken = authTokens.getRefreshToken({
+        payload: jwtPayload({ data: session.user }),
+    });
+    return { accessToken, refreshToken };
+};
 export const authService = {
     registerUser,
     loginUser,
@@ -261,4 +294,5 @@ export const authService = {
     verifyEmail,
     forgetPassword,
     resetPassword,
+    googleLoginSucces,
 };

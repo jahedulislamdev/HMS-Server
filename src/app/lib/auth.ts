@@ -1,21 +1,42 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
-import { UserRole, UserStatus } from "../../generated/prisma/enums";
+import { UserStatus } from "../../generated/prisma/enums";
 import { bearer, emailOTP } from "better-auth/plugins";
 import { sendEmail } from "../utils/email";
+import { envVars } from "../../config/env";
+import { UserRole } from "./../../generated/prisma/enums";
 
 const oneDayInSeconds = 60 * 60 * 60 * 24;
 const OTP_EXPIRES_IN = 2 * 60;
 
 export const auth = betterAuth({
+    baseURL: envVars.BETTER_AUTH_URL,
+    secret: envVars.BETTER_AUTH_SECRET,
     database: prismaAdapter(prisma, {
-        provider: "postgresql", // or "mysql", "postgresql", ...etc
+        provider: "postgresql",
     }),
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
     },
+    socialProviders: {
+        google: {
+            clientId: envVars.GOOGLE_CLIENT_ID,
+            clientSecret: envVars.GOOGLE_CLIENT_SECRET,
+            mapProfileToUser: () => {
+                return {
+                    role: UserRole.PATIENT,
+                    status: UserStatus.ACTIVE,
+                    needpasswordChange: false,
+                    emailVerified: true,
+                    isDeleted: false,
+                    deletedAt: null,
+                };
+            },
+        },
+    },
+
     emailVerification: {
         sendOnSignIn: true,
         sendOnSignUp: true,
@@ -62,7 +83,7 @@ export const auth = betterAuth({
 
                     if (user && !user.emailVerified) {
                         await sendEmail({
-                            subject: "Verify your email",
+                            subject: "Verify Your Email",
                             to: email,
                             templateName: "otp",
                             templateData: {
@@ -78,7 +99,7 @@ export const auth = betterAuth({
                     });
                     if (user) {
                         sendEmail({
-                            subject: "Password reset otp",
+                            subject: "Password Reset OTP",
                             templateName: "otp",
                             to: email,
                             templateData: {
@@ -95,11 +116,32 @@ export const auth = betterAuth({
         }),
     ],
     session: {
-        expiresIn: oneDayInSeconds, // 1 days in sec
-        updateAge: oneDayInSeconds, // 1 day in sec
+        expiresIn: oneDayInSeconds,
+        updateAge: oneDayInSeconds,
         cookieCache: {
             enabled: true,
-            maxAge: oneDayInSeconds, // 1 day in sec
+            maxAge: oneDayInSeconds,
+        },
+    },
+    advanced: {
+        useSecureCookies: false,
+        cookies: {
+            state: {
+                attributes: {
+                    secure: true,
+                    sameSite: "none",
+                    httpOnly: true,
+                    path: "/",
+                },
+            },
+            sessionToken: {
+                attributes: {
+                    secure: true,
+                    sameSite: "none",
+                    httpOnly: true,
+                    path: "/",
+                },
+            },
         },
     },
 });

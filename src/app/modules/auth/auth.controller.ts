@@ -6,6 +6,9 @@ import { StatusCodes } from "http-status-codes";
 import { authTokens } from "../../utils/token";
 import AppError from "../../helper/AppError";
 import { cookieUtils } from "../../utils/cookie";
+import { envVars } from "../../../config/env";
+import { auth } from "../../lib/auth";
+import { ISession } from "./auth.interface";
 
 const registerUser = catchAsync(async (req: Request, res: Response) => {
     const result = await authService.registerUser(req.body);
@@ -178,6 +181,53 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+//* google login handler
+const loginWithGoogle = catchAsync(async (req: Request, res: Response) => {
+    const redirectPath = req.query.redirect || "/dashboard";
+    const encodedRedirectPath = encodeURIComponent(redirectPath as string);
+    const callbackURL = `${envVars.BETTER_AUTH_URL}/api/v1/auth/google/success?redirect=${encodedRedirectPath}`;
+
+    // send response as html-the ejs template to client
+    res.render("googleRedirect", {
+        callbackURL,
+        betterAuthURL: envVars.BETTER_AUTH_URL,
+    });
+});
+const googleLoginSuccess = catchAsync(async (req: Request, res: Response) => {
+    const redirectPath = (req.query.redirect as string) || "/dashboard";
+    const sessionToken = req.cookies["better-auth.session_token"];
+    if (!sessionToken) {
+        return res.redirect(`${envVars.FRONTEND_URL}/login?error=oauth_failed`);
+    }
+    const session = await auth.api.getSession({
+        headers: {
+            cookie: `better-auth.session_token=${sessionToken}`,
+        },
+    });
+    if (session && !session.user) {
+        return res.redirect(
+            `${envVars.FRONTEND_URL}/login?error=no_user_found`,
+        );
+    }
+    const result = await authService.googleLoginSucces({
+        session: session as ISession,
+    });
+    const { accessToken, refreshToken } = result;
+    authTokens.setAccessTokenCookie({ res, token: accessToken });
+    authTokens.setRefreshTokenCookie({ res, token: refreshToken });
+
+    // check redirect url
+    const isValidURL =
+        redirectPath.startsWith("/") && !redirectPath.startsWith("//");
+    const finalRedirectPath = isValidURL ? redirectPath : "dashboard";
+
+    res.redirect(`${envVars.FRONTEND_URL}${finalRedirectPath}`);
+});
+const handleOAuthError = catchAsync(async (req: Request, res: Response) => {
+    const error = (req.query.error as string) || "oauth_failed";
+    res.redirect(`${envVars.FRONTEND_URL}/login?error=${error}`);
+});
+
 export const authController = {
     registerUser,
     loginUser,
@@ -188,4 +238,7 @@ export const authController = {
     verifyEmail,
     forgetPassword,
     resetPassword,
+    loginWithGoogle,
+    googleLoginSuccess,
+    handleOAuthError,
 };

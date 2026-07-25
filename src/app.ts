@@ -4,8 +4,16 @@ import express, { Application, Request, Response } from "express";
 import { errorHandler } from "./app/middleware/globalErrorhandler";
 import notFoundHandler from "./app/middleware/notFound";
 import cookieParser from "cookie-parser";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./app/lib/auth";
+import path from "node:path";
 
 const app: Application = express();
+
+app.set("view engine", "ejs");
+app.set("views", path.resolve(process.cwd(), `src/app/templates`));
+app.use("/api/auth", toNodeHandler(auth));
+
 //* cors check
 app.use(cors({}));
 app.use(cookieParser());
