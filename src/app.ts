@@ -24,13 +24,14 @@ app.use(
         allowedHeaders: ["Content-Type", "authorization"],
     }),
 );
-app.use(cookieParser());
 
 //* Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));
 
 //* Middleware to parse JSON bodies
 app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 
 //* main root route
 app.use("/api/v1/", indexRoutes);
