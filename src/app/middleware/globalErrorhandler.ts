@@ -4,7 +4,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { envVars } from "../../config/env";
 import { StatusCodes } from "http-status-codes";
 import { ZodError } from "zod";
-import { deleteFileFromCloudinary } from "../../config/cloudinary.congig";
+import { deleteFileFromCloudinary } from "../../config/cloudinary.config";
 
 // global error handler
 export async function errorHandler(
