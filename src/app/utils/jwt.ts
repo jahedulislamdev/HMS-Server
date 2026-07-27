@@ -9,6 +9,7 @@ export const jwtUtils = {
     ) => {
         return jwt.sign(payload, secret, { expiresIn });
     },
+
     //* Function to verify a JWT token
     verifyToken: ({ token, secret }: { token: string; secret: string }) => {
         try {

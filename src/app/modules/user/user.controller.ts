@@ -26,5 +26,13 @@ const createAdmin = catchAsync(async (req: Request, res: Response) => {
         message: "Admin created successfully",
     });
 });
+const getMe = catchAsync(async (req: Request, res: Response) => {
+    const result = await userService.getMe({ userId: req.user?.id as string });
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        data: result,
+        message: "user reterived successfully",
+    });
+});
 
-export const userController = { createDoctor, createAdmin };
+export const userController = { createDoctor, createAdmin, getMe };

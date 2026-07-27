@@ -16,13 +16,13 @@ export const authTokens = {
         } as SignOptions);
     },
     setAccessTokenCookie({ res, token }: { res: Response; token: string }) {
-        console.log(token);
+        // console.log(token);
 
         cookieUtils.setCookie(res, "access_token", token, {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: 30 * 60 * 1000, // 30 minutes in milliseconds
+            maxAge: 60 * 60 * 24 * 1000, // 30 minutes in milliseconds
             path: "/",
         });
     },
@@ -31,7 +31,7 @@ export const authTokens = {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: 60 * 60 * 60 * 24 * 7, // 7 days in milliseconds
+            maxAge: 60 * 60 * 24 * 1000 * 7, // 7 days in milliseconds
             path: "/",
         });
     },
@@ -46,7 +46,7 @@ export const authTokens = {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: 60 * 60 * 60 * 24, // 1 day in milliseconds
+            maxAge: 60 * 60 * 24 * 1000, // 1 day in milliseconds
             path: "/",
         });
     },

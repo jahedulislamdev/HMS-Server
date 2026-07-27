@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Redirecting to Google...</title>
+   <style>
+      *,
+      *::before,
+      *::after {
+         box-sizing: border-box;
+         margin: 0;
+         padding: 0;
+      }
+
+      body {
+         min-height: 100vh;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         background: #f8f9fa;
+         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: #1a1a1a;
+      }
+
+      .card {
+         background: #fff;
+         border: 1px solid #e8eaed;
+         border-radius: 12px;
+         padding: 48px 40px;
+         max-width: 400px;
+         width: 90%;
+         text-align: center;
+         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      }
+
+      /* Google "G" logo */
+      .google-logo {
+         width: 48px;
+         height: 48px;
+         margin: 0 auto 24px;
+      }
+
+      .status-text {
+         font-size: 16px;
+         font-weight: 500;
+         color: #3c4043;
+         margin-bottom: 8px;
+      }
+
+      .sub-text {
+         font-size: 13px;
+         color: #80868b;
+      }
+
+      /* Animated dots */
+      .dots::after {
+         content: '';
+         animation: dots 1.4s steps(4, end) infinite;
+      }
+
+      @keyframes dots {
+         0% {
+            content: '';
+         }
+
+         25% {
+            content: '.';
+         }
+
+         50% {
+            content: '..';
+         }
+
+         75% {
+            content: '...';
+         }
+
+         100% {
+            content: '';
+         }
+      }
+
+      /* Progress bar */
+      .progress-bar {
+         height: 3px;
+         background: #e8eaed;
+         border-radius: 2px;
+         margin-top: 28px;
+         overflow: hidden;
+      }
+
+      .progress-fill {
+         height: 100%;
+         width: 0%;
+         background: linear-gradient(90deg, #4285f4, #34a853);
+         border-radius: 2px;
+         animation: fill 1.6s ease-in-out forwards;
+      }
+
+      @keyframes fill {
+         0% {
+            width: 0%;
+         }
+
+         60% {
+            width: 75%;
+         }
+
+         100% {
+            width: 90%;
+         }
+      }
+
+      /* Error state */
+      .card.error .google-logo {
+         display: none;
+      }
+
+      .error-icon {
+         display: none;
+         width: 48px;
+         height: 48px;
+         margin: 0 auto 24px;
+         background: #fce8e6;
+         border-radius: 50%;
+         align-items: center;
+         justify-content: center;
+         font-size: 24px;
+      }
+
+      .card.error .error-icon {
+         display: flex;
+      }
+
+      .card.error .progress-bar {
+         display: none;
+      }
+
+      .card.error .dots::after {
+         display: none;
+      }
+
+      .retry-btn {
+         display: none;
+         margin-top: 20px;
+         padding: 10px 24px;
+         background: #4285f4;
+         color: #fff;
+         border: none;
+         border-radius: 6px;
+         font-size: 14px;
+         font-weight: 500;
+         cursor: pointer;
+         transition: background 0.15s;
+      }
+
+      .retry-btn:hover {
+         background: #3367d6;
+      }
+
+      .card.error .retry-btn {
+         display: inline-block;
+      }
+
+      .error-detail {
+         display: none;
+         margin-top: 10px;
+         font-size: 12px;
+         color: #80868b;
+         word-break: break-word;
+      }
+
+      .card.error .error-detail {
+         display: block;
+      }
+   </style>
+</head>
+
+<body>
+   <div class="card" id="card">
+      <!-- Google G SVG -->
+      <svg class="google-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+         <path fill="#EA4335"
+            d="M24 9.5c3.14 0 5.95 1.08 8.17 2.84l6.1-6.1C34.46 3.09 29.53 1 24 1 14.82 1 6.97 6.48 3.44 14.41l7.1 5.51C12.34 13.54 17.72 9.5 24 9.5z" />
+         <path fill="#4285F4"
+            d="M46.5 24.5c0-1.64-.15-3.22-.42-4.75H24v9h12.67c-.55 2.96-2.2 5.47-4.67 7.15l7.19 5.58C43.18 37.36 46.5 31.35 46.5 24.5z" />
+         <path fill="#FBBC05"
+            d="M10.54 28.58A14.63 14.63 0 0 1 9.5 24c0-1.59.27-3.13.76-4.58l-7.1-5.51A23.87 23.87 0 0 0 1 24c0 3.86.92 7.5 2.55 10.73l7-5.15z" />
+         <path fill="#34A853"
+            d="M24 47c5.52 0 10.16-1.83 13.54-4.97l-7.19-5.58C28.57 37.77 26.38 38.5 24 38.5c-6.28 0-11.66-4.04-13.46-9.92l-7 5.15C6.97 41.52 14.82 47 24 47z" />
+      </svg>
+
+      <div class="error-icon">⚠️</div>
+
+      <p class="status-text" id="status-text">
+         Redirecting to Google<span class="dots"></span>
+      </p>
+      <p class="sub-text" id="sub-text">You'll be back in a moment</p>
+
+      <div class="progress-bar">
+         <div class="progress-fill"></div>
+      </div>
+
+      <p class="error-detail" id="error-detail"></p>
+      <button class="retry-btn" onclick="window.location.reload()">Try again</button>
+   </div>
+
+   <script>
+      (async () => {
+         try {
+            console.log("Better Auth URL:", "<%=betterAuthURL%>");
+            const res = await fetch("<%=betterAuthURL%>/api/auth/sign-in/social", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               credentials: "include",
+               body: JSON.stringify({
+                  provider: "google",
+                  callbackURL: "<%=callbackURL%>"
+               })
+            });
+
+            if (!res.ok) {
+               showError("Sign-in failed. Please try again.", `Server responded with ${res.status} ${res.statusText}`);
+               return;
+            }
+
+            const contentType = res.headers.get("Content-Type") || "";
+            if (!contentType.includes("application/json")) {
+               showError("Sign-in failed. Please try again.", "Unexpected response from server.");
+               return;
+            }
+
+            const data = await res.json();
+
+            if (data.url) {
+               window.location.href = data.url;
+            } else {
+               showError("Sign-in failed. Please try again.");
+            }
+         } catch (err) {
+            showError("Could not reach the sign-in service.", err.message);
+         }
+      })();
+
+      function showError(message, detail = "") {
+         const card = document.getElementById("card");
+         card.classList.add("error");
+         document.getElementById("status-text").textContent = message;
+         document.getElementById("sub-text").textContent = "Something went wrong during sign-in.";
+         if (detail) document.getElementById("error-detail").textContent = detail;
+      }
+   </script>
+</body>
+
+</html>

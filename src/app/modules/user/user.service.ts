@@ -51,7 +51,7 @@ const createDoctor = async ({
 
     //* create doctor and specialties
     try {
-        return await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx) => {
             //! check for unique registration number
             const regNumExist = await tx.doctor.findUnique({
                 where: {
@@ -155,4 +155,37 @@ const createAdmin = async ({
     }
 };
 
-export const userService = { createDoctor, createAdmin };
+//* get me
+const getMe = async ({ userId }: { userId: string }) => {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+            patient: {
+                include: {
+                    appointments: true,
+                    medicalReports: true,
+                    patientHealthData: true,
+                    prescriptions: true,
+                    reviews: true,
+                },
+            },
+            doctor: {
+                include: {
+                    specialties: true,
+                    appointments: true,
+                    reviews: true,
+                    prescriptions: true,
+                },
+            },
+            admin: true,
+        },
+    });
+    if (!user) {
+        throw new AppError(StatusCodes.NOT_FOUND, "user not found.");
+    }
+    return user;
+};
+
+//* get token
+
+export const userService = { createDoctor, createAdmin, getMe };
