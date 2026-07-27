@@ -6,7 +6,9 @@ import { StatusCodes } from "http-status-codes";
 
 //* create speciality
 const createSpecialty = catchAsync(async (req: Request, res: Response) => {
-    const payload = req.body;
+    console.log(req.body);
+
+    const payload = { ...req.body, icon: req.file?.path };
     const result = await specialtyService.createSpecialty(payload);
     sendResponse(res, {
         statusCode: StatusCodes.CREATED,
