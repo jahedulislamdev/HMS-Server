@@ -70,5 +70,5 @@ export interface PrismaNumberFilterParms {
     lte?: number;
     gt?: number;
     gte?: number;
-    not?: PrismaNumberFilterParms | number;
+    not?: PrismaNumberFqilterParms | number;
 }
