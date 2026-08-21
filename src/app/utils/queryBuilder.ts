@@ -258,6 +258,47 @@ export class QueryBuilder<
 
         return this;
     }
+    include(relation: TInclude): this {
+        if (this.selectFields) {
+            return this;
+        }
+        // if fields method is use, include methos will be ignored. because select and include cannot be used together in Prisma queries
+        this.query.include = {
+            ...(this.query.include as Record<string, unknown>),
+            ...(relation as Record<string, unknown>),
+        };
+        return this;
+    }
+    dynamicInclude(
+        includeConfig: Record<string, unknown>,
+        defaultInclude?: string[],
+    ): this {
+        if (this.selectFields) {
+            return this;
+        }
+        const result: Record<string, unknown> = {};
+        defaultInclude?.forEach((f) => {
+            if (includeConfig[f]) {
+                result[f] = includeConfig[f];
+            }
+        });
+        const includesParam = this.queryParams.includes as string | undefined;
+        if (includesParam && typeof includesParam === "string") {
+            const requestedRelation = includesParam
+                .split(",")
+                .map((r) => r.trim());
+            requestedRelation.forEach((r) => {
+                if (includeConfig[r]) {
+                    result[r] = includeConfig[r];
+                }
+            });
+        }
+        this.query.include = {
+            ...(this.query.include as Record<string, unknown>),
+            ...result,
+        };
+        return this;
+    }
     private parseFilterValue(value: unknown): unknown {
         if (value === "true") {
             return true;
