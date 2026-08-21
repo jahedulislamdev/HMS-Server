@@ -16,12 +16,12 @@ export class QueryBuilder<
 > {
     private query: PrismaFindManyArgs;
     private countQuery: PrismaCountArgs;
-    private Page: number = 1;
+    private page: number = 1;
     private limit: number = 10;
     private skip: number = 0;
     private sortBy: string = "createdAt";
     private sortOrder: "asc" | "desc" = "desc";
-    private selectFields: Record<string, boolean | undefined>;
+    private selectFields: Record<string, boolean | undefined> = {};
 
     constructor(
         private model: PrismaModelDelegate,
@@ -137,39 +137,52 @@ export class QueryBuilder<
 
             if (key.includes(".")) {
                 const parts = key.split(".");
+                if (filterableFields && !filterableFields.includes(key)) {
+                    return;
+                }
                 if (parts.length === 2) {
                     const [relation, nestedField] = parts;
+                    if (!queryWhere[relation]) {
+                        queryWhere[relation] = {};
+                        countQueryWhere[relation] = {};
+                    }
                     queryWhere[relation] = {
-                        [nestedField]: value,
+                        [nestedField]: this.parseFilterValue(value),
                     };
                     countQueryWhere[relation] = {
-                        [nestedField]: value,
+                        [nestedField]: this.parseFilterValue(value),
                     };
                     return;
                 }
 
                 if (parts.length === 3) {
                     const [relation, nestedRelation, nestedField] = parts;
+                    if (!queryWhere[relation]) {
+                        queryWhere[relation] = {};
+                        countQueryWhere[relation] = {};
+                    }
                     queryWhere[relation] = {
                         [nestedRelation]: {
-                            [nestedField]: value,
+                            [nestedField]: this.parseFilterValue(value),
                         },
                     };
                     countQueryWhere[relation] = {
                         [nestedRelation]: {
-                            [nestedField]: value,
+                            [nestedField]: this.parseFilterValue(value),
                         },
                     };
                     return;
                 }
             }
-
+            // Handle range filters for number and string fields
             if (
                 typeof value === "object" &&
                 value !== null &&
                 !Array.isArray(value)
             ) {
-                queryWhere[key] = this.parseFilterValue(value);
+                queryWhere[key] = this.parseRangeFilterValue(
+                    value as Record<string, string | number>,
+                );
                 countQueryWhere[key] = this.parseRangeFilterValue(
                     value as Record<string, string | number>,
                 );
@@ -184,7 +197,67 @@ export class QueryBuilder<
 
         return this;
     }
+    paginate(): this {
+        const page = parseInt(this.queryParams.page || "1", 10);
+        const limit = parseInt(this.queryParams.limit || "10", 10);
+        this.page = page > 0 ? page : 1;
+        this.limit = limit > 0 ? limit : 10;
+        this.skip = (this.page - 1) * limit;
+        this.query.skip = this.skip;
+        this.query.take = this.limit;
 
+        return this;
+    }
+    sort(): this {
+        const sortBy = this.queryParams.sortBy || "createdAt";
+        const sortOrder = this.queryParams.sortOrder === "asc" ? "asc" : "desc";
+        this.sortBy = sortBy;
+        this.sortOrder = sortOrder;
+        if (sortBy.includes(".")) {
+            const parts = sortBy.split(".");
+            if (parts.length === 2) {
+                const [relation, nestedField] = parts;
+                this.query.orderBy = {
+                    [relation]: { [nestedField]: sortOrder },
+                };
+            } else if (parts.length === 3) {
+                const [relation, nestedRelation, nestedField] = parts;
+                this.query.orderBy = {
+                    [relation]: {
+                        [nestedRelation]: { [nestedField]: sortOrder },
+                    },
+                };
+            } else {
+                this.query.orderBy = {
+                    [sortBy]: sortOrder,
+                };
+            }
+        }
+        return this;
+    }
+    fields(): this {
+        const fieldsParam = this.queryParams.fields;
+
+        // no nesting fields selection is supported, only direct fields can be selected
+        if (fieldsParam && typeof fieldsParam === "string") {
+            const fieldsArray = fieldsParam
+                ? fieldsParam.split(",").map((f) => f.trim())
+                : [];
+            this.selectFields = {};
+            fieldsArray.forEach((field) => {
+                if (this.selectFields) {
+                    this.selectFields[field] = true;
+                }
+            });
+            this.query.select = this.selectFields as Record<
+                string,
+                boolean | Record<string, unknown>
+            >;
+            delete this.query.include;
+        }
+
+        return this;
+    }
     private parseFilterValue(value: unknown): unknown {
         if (value === "true") {
             return true;
