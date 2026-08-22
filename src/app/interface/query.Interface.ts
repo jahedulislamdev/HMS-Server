@@ -70,5 +70,15 @@ export interface PrismaNumberFilterParms {
     lte?: number;
     gt?: number;
     gte?: number;
-    not?: PrismaNumberFqilterParms | number;
+    not?: PrismaNumberFilterParms | number;
+}
+
+export interface IQueryResult<T> {
+    data: T[];
+    meta: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
 }
