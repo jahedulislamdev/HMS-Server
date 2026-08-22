@@ -4,10 +4,12 @@ import { doctorService } from "./doctor.service";
 import sendResponse from "../../shared/sendResponse";
 import { StatusCodes } from "http-status-codes";
 import { UserRole } from "../../../generated/prisma/enums";
+import { IQueryParams } from "../../interface/query.Interface";
 
 //* get all doctor
 const getDoctors = catchAsync(async (req: Request, res: Response) => {
-    const result = await doctorService.getDoctors();
+    const query = req.query;
+    const result = await doctorService.getDoctors(query as IQueryParams);
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         message: "doctors retrieved successfully",
