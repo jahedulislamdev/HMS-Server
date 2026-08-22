@@ -6,23 +6,23 @@ import { prisma } from "../../lib/prisma";
 
 //* get all doctor
 const getDoctors = async () => {
-    return await prisma.doctor.findMany({
-        where: { isDeleted: false },
-        include: {
-            user: true,
-            specialties: {
-                select: {
-                    id: true,
-                    specialty: {
-                        select: {
-                            id: true,
-                            title: true,
-                        },
-                    },
-                },
-            },
-        },
-    });
+    // return await prisma.doctor.findMany({
+    //     where: { isDeleted: false },
+    //     include: {
+    //         user: true,
+    //         specialties: {
+    //             select: {
+    //                 id: true,
+    //                 specialty: {
+    //                     select: {
+    //                         id: true,
+    //                         title: true,
+    //                     },
+    //                 },
+    //             },
+    //         },
+    //     },
+    // });
 };
 
 //* get doctor by id

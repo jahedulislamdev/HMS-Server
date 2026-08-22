@@ -93,7 +93,7 @@ const createDoctor = async ({
                     designation: true,
                     experience: true,
                     address: true,
-                    specialty: {
+                    specialties: {
                         select: {
                             specialty: {
                                 select: {

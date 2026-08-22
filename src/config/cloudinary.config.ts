@@ -46,7 +46,8 @@ export const uploadFileToCloudinary = ({
                     public_id: uniqueName,
                     folder: `HMS/${folder}`,
                 },
-                (err, res) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (err: any, res) => {
                     if (err) {
                         return reject(
                             new AppError(

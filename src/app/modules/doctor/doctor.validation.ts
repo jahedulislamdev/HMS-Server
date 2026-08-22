@@ -42,7 +42,7 @@ export const updateDoctorSchema = z
             .min(0, "Experience cannot be negative.")
             .max(60, "Experience cannot exceed 60 years."),
 
-        currentWorkplace: z
+        currentWorkingPlace: z
             .string()
             .trim()
             .min(2, "Current workplace must be at least 2 characters long.")

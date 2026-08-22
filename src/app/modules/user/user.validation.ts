@@ -43,7 +43,7 @@ export const doctorSchema = z.object({
             .min(3, "Qualification must be at least 3 characters long.")
             .max(50, "Qualification cannot exceed 50 characters."),
 
-        currentWorkplace: z
+        currentWorkingPlace: z
             .string("Current workplace is required.")
             .min(3, "Current workplace must be at least 3 characters long.")
             .max(50, "Current workplace cannot exceed 50 characters."),
