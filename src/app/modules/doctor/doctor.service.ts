@@ -3,25 +3,34 @@ import { IUpdateDoctorPayload } from "./doctor.iterface";
 import { StatusCodes } from "http-status-codes";
 import AppError from "../../helper/AppError";
 import { prisma } from "../../lib/prisma";
+import { QueryBuilder } from "../../utils/queryBuilder";
+import { IQueryParams } from "../../interface/query.Interface";
+import {
+    doctorFilterableFields,
+    doctorIncludeConfig,
+    doctorSearchableFields,
+} from "./doctor.constant";
+import { Doctor, Prisma } from "../../../generated/prisma/client";
 
 //* get all doctor
-const getDoctors = async () => {
-    return await prisma.doctor.findMany({
-        include: {
-            user: true,
-            specialties: {
-                select: {
-                    id: true,
-                    specialty: {
-                        select: {
-                            id: true,
-                            title: true,
-                        },
-                    },
-                },
-            },
-        },
+const getDoctors = async (query: IQueryParams) => {
+    const queryBuilder = new QueryBuilder<
+        Doctor,
+        Prisma.DoctorWhereInput,
+        Prisma.DoctorInclude
+    >(prisma.doctor, query, {
+        searchableFields: doctorSearchableFields,
+        filterableFields: doctorFilterableFields,
     });
+    return await queryBuilder
+        .search()
+        .filter()
+        .include({ user: true, specialties: { include: { specialty: true } } })
+        .dynamicInclude(doctorIncludeConfig)
+        .paginate()
+        .sort()
+        .fields()
+        .execute();
 };
 
 //* get doctor by id
