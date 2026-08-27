@@ -22,12 +22,12 @@ export class QueryBuilder<
     private skip: number = 0;
     private sortBy: string = "createdAt";
     private sortOrder: "asc" | "desc" = "desc";
-    private selectFields: Record<string, boolean> | null = null;
+    private selectFields: Record<string, boolean> | undefined;
 
     constructor(
         private model: PrismaModelDelegate,
         private queryParams: IQueryParams,
-        private config: IQueryConfig,
+        private config: IQueryConfig = {},
     ) {
         this.query = {
             where: {},
@@ -40,78 +40,142 @@ export class QueryBuilder<
             where: {},
         };
     }
+
     search(): this {
         const { searchTerm } = this.queryParams;
         const { searchableFields } = this.config;
 
+        // No search term or searchable fields
         if (!searchTerm || !searchableFields || searchableFields.length === 0) {
             return this;
         }
 
-        const stringFilter: PrismaStringFilterParms = {
-            contains: searchTerm,
-            mode: "insensitive",
-        };
+        const searchValue = String(searchTerm).trim();
 
-        const searchConditions: Record<string, unknown>[] =
-            searchableFields.flatMap((field) => {
-                const parts = field.split(".").filter(Boolean);
+        if (!searchValue) {
+            return this;
+        }
 
-                // Direct field
-                if (parts.length === 1) {
-                    return [
-                        {
-                            [parts[0]]: stringFilter,
+        const searchConditions: Record<string, unknown>[] = [];
+
+        searchableFields.forEach((field) => {
+            const parts = field.split(".").filter(Boolean);
+
+            if (parts.length === 0) {
+                return;
+            }
+
+            // -----------------------------------------
+            // Direct field
+            // Example:
+            // ?searchTerm=john
+            //
+            // searchableFields: ["name", "email"]
+            // -----------------------------------------
+
+            if (parts.length === 1) {
+                const [fieldName] = parts;
+
+                searchConditions.push({
+                    [fieldName]: {
+                        contains: searchValue,
+                        mode: "insensitive",
+                    },
+                });
+
+                return;
+            }
+
+            // -----------------------------------------
+            // relation.field
+            //
+            // Example:
+            // searchableFields: ["user.name"]
+            //
+            // Result:
+            // {
+            //     user: {
+            //         name: {
+            //             contains: "john",
+            //             mode: "insensitive"
+            //         }
+            //     }
+            // }
+            // -----------------------------------------
+
+            if (parts.length === 2) {
+                const [relation, nestedField] = parts;
+
+                searchConditions.push({
+                    [relation]: {
+                        [nestedField]: {
+                            contains: searchValue,
+                            mode: "insensitive",
                         },
-                    ];
-                }
+                    },
+                });
 
-                // relation.field
-                if (parts.length === 2) {
-                    const [relation, nestedField] = parts;
+                return;
+            }
 
-                    return [
-                        {
-                            [relation]: {
-                                [nestedField]: stringFilter,
+            // -----------------------------------------
+            // relation.nestedRelation.field
+            //
+            // Example:
+            // searchableFields: ["user.profile.name"]
+            //
+            // Result:
+            // {
+            //     user: {
+            //         profile: {
+            //             name: {
+            //                 contains: "john",
+            //                 mode: "insensitive"
+            //             }
+            //     }
+            // }
+            // -----------------------------------------
+
+            if (parts.length === 3) {
+                const [relation, nestedRelation, nestedField] = parts;
+
+                searchConditions.push({
+                    [relation]: {
+                        [nestedRelation]: {
+                            [nestedField]: {
+                                contains: searchValue,
+                                mode: "insensitive",
                             },
                         },
-                    ];
-                }
+                    },
+                });
 
-                // relation.nestedRelation.field
-                if (parts.length === 3) {
-                    const [relation, nestedRelation, nestedField] = parts;
+                return;
+            }
+        });
 
-                    return [
-                        {
-                            [relation]: {
-                                [nestedRelation]: {
-                                    [nestedField]: stringFilter,
-                                },
-                            },
-                        },
-                    ];
-                }
-
-                return [];
-            });
-
+        // No valid search conditions
         if (searchConditions.length === 0) {
             return this;
         }
 
+        // Apply search to main query
         const whereCondition = this.query.where as PrismaWhereCondition;
+
         whereCondition.OR = searchConditions;
 
+        // Apply the same search to count query
         const countWhereCondition = this.countQuery
             .where as PrismaWhereCondition;
+
         countWhereCondition.OR = searchConditions;
 
         return this;
     }
+
     filter(): this {
         const { filterableFields } = this.config;
+
         const excludedFields = [
             "searchTerm",
             "page",
@@ -119,15 +183,8 @@ export class QueryBuilder<
             "sortBy",
             "sortOrder",
             "fields",
-            "includes",
+            "include",
         ];
-        const filterParams: Record<string, unknown> = {};
-
-        Object.keys(this.queryParams).forEach((key) => {
-            if (!excludedFields.includes(key)) {
-                filterParams[key] = this.queryParams[key];
-            }
-        });
 
         const queryWhere = this.query.where as Record<string, unknown>;
         const countQueryWhere = this.countQuery.where as Record<
@@ -135,92 +192,95 @@ export class QueryBuilder<
             unknown
         >;
 
-        Object.keys(filterParams).forEach((key) => {
-            const value = filterParams[key];
-            if (value === undefined || value === null || value === "") {
-                return;
+        // Get only filter parameters
+        const filterParams: Record<string, unknown> = {};
+
+        Object.entries(this.queryParams).forEach(([key, value]) => {
+            if (!excludedFields.includes(key)) {
+                filterParams[key] = value;
             }
+        });
 
-            const isAllowedField =
-                !filterableFields ||
-                filterableFields.length === 0 ||
-                filterableFields.includes(key);
-            if (!isAllowedField) {
-                return;
-            }
-
-            if (key.includes(".")) {
-                const parts = key.split(".");
-                if (filterableFields && !filterableFields.includes(key)) {
-                    return;
-                }
-                if (parts.length === 2) {
-                    const [relation, nestedField] = parts;
-                    if (!queryWhere[relation]) {
-                        queryWhere[relation] = {};
-                        countQueryWhere[relation] = {};
-                    }
-                    const queryRelation = queryWhere[relation] as Record<
-                        string,
-                        unknown
-                    >;
-                    const countRelation = countQueryWhere[relation] as Record<
-                        string,
-                        unknown
-                    >;
-
-                    queryRelation[nestedField] = this.parseFilterValue(value);
-                    countRelation[nestedField] = this.parseFilterValue(value);
-
-                    return;
-                }
-
-                if (parts.length === 3) {
-                    const [relation, nestedRelation, nestedField] = parts;
-
-                    const nestedCondition = {
-                        [relation]: {
-                            [nestedRelation]: {
-                                [nestedField]: this.parseFilterValue(value),
-                            },
-                        },
-                    };
-
-                    this.query.where = this.deepMerge(
-                        this.query.where as Record<string, unknown>,
-                        nestedCondition,
-                    );
-
-                    this.countQuery.where = this.deepMerge(
-                        this.countQuery.where as Record<string, unknown>,
-                        nestedCondition,
-                    );
-
-                    return;
-                }
-            }
-            // Handle range filters for number and string fields
+        Object.entries(filterParams).forEach(([key, value]) => {
+            // Ignore empty values
             if (
+                value === undefined ||
+                value === null ||
+                value === "" ||
+                (Array.isArray(value) && value.length === 0)
+            ) {
+                return;
+            }
+
+            // Only allow configured filterable fields
+            if (
+                filterableFields &&
+                filterableFields.length > 0 &&
+                !filterableFields.includes(key)
+            ) {
+                return;
+            }
+
+            const parsedValue =
                 typeof value === "object" &&
                 value !== null &&
                 !Array.isArray(value)
-            ) {
-                queryWhere[key] = this.parseRangeFilterValue(
-                    value as Record<string, string | number>,
-                );
-                countQueryWhere[key] = this.parseRangeFilterValue(
-                    value as Record<string, string | number>,
-                );
+                    ? this.parseRangeFilterValue(
+                          value as Record<string, string | number>,
+                      )
+                    : this.parseFilterValue(value);
+
+            // -----------------------------------------
+            // Handle nested relation filters
+            // Example:
+            // ?user.gender=MALE
+            // ?user.profile.age=25
+            // -----------------------------------------
+
+            if (key.includes(".")) {
+                const parts = key.split(".");
+
+                let queryTarget = queryWhere;
+                let countTarget = countQueryWhere;
+
+                parts.forEach((part, index) => {
+                    const isLastPart = index === parts.length - 1;
+
+                    if (isLastPart) {
+                        queryTarget[part] = parsedValue;
+                        countTarget[part] = parsedValue;
+                        return;
+                    }
+
+                    if (!queryTarget[part]) {
+                        queryTarget[part] = {};
+                    }
+
+                    if (!countTarget[part]) {
+                        countTarget[part] = {};
+                    }
+
+                    queryTarget = queryTarget[part] as Record<string, unknown>;
+                    countTarget = countTarget[part] as Record<string, unknown>;
+                });
+
                 return;
             }
-            // For simple values, we can directly assign them
-            const parsedValue = this.parseFilterValue(value);
+
+            // -----------------------------------------
+            // Normal field filter
+            // Example:
+            // ?gender=MALE
+            // ?isDeleted=false
+            // -----------------------------------------
+
             queryWhere[key] = parsedValue;
             countQueryWhere[key] = parsedValue;
         });
 
         return this;
     }
+
     paginate(): this {
         const page = parseInt(this.queryParams.page || "1", 10);
         const limit = parseInt(this.queryParams.limit || "10", 10);
@@ -424,30 +484,33 @@ export class QueryBuilder<
         > = {};
         Object.keys(value).forEach((operator) => {
             const operatorValue = value[operator];
-            // const parsedValue: string | number =
-            //     typeof operatorValue === "string" &&
-            //     !isNaN(Number(operatorValue))
-            //         ? Number(operatorValue)
-            //         : operatorValue;
+            const parsedValue: string | number =
+                typeof operatorValue === "string" &&
+                !isNaN(Number(operatorValue))
+                    ? Number(operatorValue)
+                    : operatorValue;
 
             switch (operator) {
-                case "contains":
-                case "startsWith":
-                case "endsWith":
-                    rangeFilter[operator] = String(operatorValue);
-                    break;
-
                 case "equals":
                 case "lte":
                 case "gte":
                 case "gt":
                 case "lt":
-                    rangeFilter[operator] =
-                        typeof operatorValue === "string" &&
-                        operatorValue.trim() !== "" &&
-                        !isNaN(Number(operatorValue))
-                            ? Number(operatorValue)
-                            : operatorValue;
+                case "not":
+                case "contains":
+                case "startsWith":
+                case "endsWith":
+                    rangeFilter[operator] = parsedValue;
+                    break;
+                case "in":
+                case "notIn":
+                    if (Array.isArray(operatorValue)) {
+                        rangeFilter[operator] = operatorValue;
+                    } else {
+                        rangeFilter[operator] = [parsedValue];
+                    }
+                    break;
+                default:
                     break;
             }
         });
