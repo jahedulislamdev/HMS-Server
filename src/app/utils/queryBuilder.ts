@@ -10,6 +10,7 @@ import {
     PrismaWhereCondition,
 } from "../interface/query.Interface";
 
+// T = Model Type
 export class QueryBuilder<
     T,
     TWhereInput = Record<string, unknown>,
@@ -36,6 +37,7 @@ export class QueryBuilder<
             skip: 0,
             take: 10,
         };
+
         this.countQuery = {
             where: {},
         };
@@ -45,138 +47,78 @@ export class QueryBuilder<
         const { searchTerm } = this.queryParams;
         const { searchableFields } = this.config;
 
-        // No search term or searchable fields
-        if (!searchTerm || !searchableFields || searchableFields.length === 0) {
-            return this;
-        }
+        // doctorSearchableFields = ['user.name', 'user.email', 'specialties.specialty.title' , 'specialties.specialty.description']
+        if (searchTerm && searchableFields && searchableFields.length > 0) {
+            const searchConditions: Record<string, unknown>[] =
+                searchableFields.map((field) => {
+                    if (field.includes(".")) {
+                        const parts = field.split(".");
 
-        const searchValue = String(searchTerm).trim();
+                        if (parts.length === 2) {
+                            const [relation, nestedField] = parts;
+                            console.log(
+                                "relation",
+                                relation,
+                                "nestedField",
+                                nestedField,
+                            );
+                            const stringFilter: PrismaStringFilterParms = {
+                                contains: searchTerm,
+                                mode: "insensitive" as const,
+                            };
 
-        if (!searchValue) {
-            return this;
-        }
+                            return {
+                                [relation]: {
+                                    [nestedField]: stringFilter,
+                                },
+                            };
+                        } else if (parts.length === 3) {
+                            const [relation, nestedRelation, nestedField] =
+                                parts;
 
-        const searchConditions: Record<string, unknown>[] = [];
+                            const stringFilter: PrismaStringFilterParms = {
+                                contains: searchTerm,
+                                mode: "insensitive" as const,
+                            };
 
-        searchableFields.forEach((field) => {
-            const parts = field.split(".").filter(Boolean);
+                            return {
+                                [relation]: {
+                                    some: {
+                                        [nestedRelation]: {
+                                            [nestedField]: stringFilter,
+                                        },
+                                    },
+                                },
+                            };
+                        }
+                    }
+                    // direct field
+                    const stringFilter: PrismaStringFilterParms = {
+                        contains: searchTerm,
+                        mode: "insensitive" as const,
+                    };
 
-            if (parts.length === 0) {
-                return;
-            }
-
-            // -----------------------------------------
-            // Direct field
-            // Example:
-            // ?searchTerm=john
-            //
-            // searchableFields: ["name", "email"]
-            // -----------------------------------------
-
-            if (parts.length === 1) {
-                const [fieldName] = parts;
-
-                searchConditions.push({
-                    [fieldName]: {
-                        contains: searchValue,
-                        mode: "insensitive",
-                    },
+                    return {
+                        [field]: stringFilter,
+                    };
                 });
 
-                return;
-            }
+            const whereConditions = this.query.where as PrismaWhereCondition;
 
-            // -----------------------------------------
-            // relation.field
-            //
-            // Example:
-            // searchableFields: ["user.name"]
-            //
-            // Result:
-            // {
-            //     user: {
-            //         name: {
-            //             contains: "john",
-            //             mode: "insensitive"
-            //         }
-            //     }
-            // }
-            // -----------------------------------------
+            whereConditions.OR = searchConditions;
 
-            if (parts.length === 2) {
-                const [relation, nestedField] = parts;
-
-                searchConditions.push({
-                    [relation]: {
-                        [nestedField]: {
-                            contains: searchValue,
-                            mode: "insensitive",
-                        },
-                    },
-                });
-
-                return;
-            }
-
-            // -----------------------------------------
-            // relation.nestedRelation.field
-            //
-            // Example:
-            // searchableFields: ["user.profile.name"]
-            //
-            // Result:
-            // {
-            //     user: {
-            //         profile: {
-            //             name: {
-            //                 contains: "john",
-            //                 mode: "insensitive"
-            //             }
-            //     }
-            // }
-            // -----------------------------------------
-
-            if (parts.length === 3) {
-                const [relation, nestedRelation, nestedField] = parts;
-
-                searchConditions.push({
-                    [relation]: {
-                        [nestedRelation]: {
-                            [nestedField]: {
-                                contains: searchValue,
-                                mode: "insensitive",
-                            },
-                        },
-                    },
-                });
-
-                return;
-            }
-        });
-
-        // No valid search conditions
-        if (searchConditions.length === 0) {
-            return this;
+            const countWhereConditions = this.countQuery
+                .where as PrismaWhereCondition;
+            countWhereConditions.OR = searchConditions;
         }
-
-        // Apply search to main query
-        const whereCondition = this.query.where as PrismaWhereCondition;
-
-        whereCondition.OR = searchConditions;
-
-        // Apply the same search to count query
-        const countWhereCondition = this.countQuery
-            .where as PrismaWhereCondition;
-
-        countWhereCondition.OR = searchConditions;
 
         return this;
     }
-
+    // /doctors?searchTerm=john&page=1&sortBy=name&specialty=cardiology&appointmentFee[lt]=100 => {}
+    // { specialty: 'cardiology', appointmentFee: { lt: '100' } }
     filter(): this {
         const { filterableFields } = this.config;
-
-        const excludedFields = [
+        const excludedField = [
             "searchTerm",
             "page",
             "limit",
@@ -186,129 +128,191 @@ export class QueryBuilder<
             "include",
         ];
 
+        const filterParams: Record<string, unknown> = {};
+
+        Object.keys(this.queryParams).forEach((key) => {
+            if (!excludedField.includes(key)) {
+                filterParams[key] = this.queryParams[key];
+            }
+        });
+
         const queryWhere = this.query.where as Record<string, unknown>;
         const countQueryWhere = this.countQuery.where as Record<
             string,
             unknown
         >;
 
-        // Get only filter parameters
-        const filterParams: Record<string, unknown> = {};
+        Object.keys(filterParams).forEach((key) => {
+            const value = filterParams[key];
 
-        Object.entries(this.queryParams).forEach(([key, value]) => {
-            if (!excludedFields.includes(key)) {
-                filterParams[key] = value;
-            }
-        });
-
-        Object.entries(filterParams).forEach(([key, value]) => {
-            // Ignore empty values
-            if (
-                value === undefined ||
-                value === null ||
-                value === "" ||
-                (Array.isArray(value) && value.length === 0)
-            ) {
+            if (value === undefined || value === "") {
                 return;
             }
 
-            // Only allow configured filterable fields
-            if (
-                filterableFields &&
-                filterableFields.length > 0 &&
-                !filterableFields.includes(key)
-            ) {
-                return;
-            }
+            const isAllowedField =
+                !filterableFields ||
+                filterableFields.length === 0 ||
+                filterableFields.includes(key);
 
-            const parsedValue =
-                typeof value === "object" &&
-                value !== null &&
-                !Array.isArray(value)
-                    ? this.parseRangeFilterValue(
-                          value as Record<string, string | number>,
-                      )
-                    : this.parseFilterValue(value);
+            // doctorFilterableFields = ['specialties.specialty.title', 'appointmentFee']
+            // /doctors?appointmentFee[lt]=100&appointmentFee[gt]=50 => { appointmentFee: { lt: '100', gt: '50' } }
 
-            // -----------------------------------------
-            // Handle nested relation filters
-            // Example:
-            // ?user.gender=MALE
-            // ?user.profile.age=25
-            // -----------------------------------------
-
+            // /doctors?user.name=John => { user: { name: 'John' } }
             if (key.includes(".")) {
                 const parts = key.split(".");
 
-                let queryTarget = queryWhere;
-                let countTarget = countQueryWhere;
+                if (filterableFields && !filterableFields.includes(key)) {
+                    return;
+                }
 
-                parts.forEach((part, index) => {
-                    const isLastPart = index === parts.length - 1;
+                if (parts.length === 2) {
+                    const [relation, nestedField] = parts;
 
-                    if (isLastPart) {
-                        queryTarget[part] = parsedValue;
-                        countTarget[part] = parsedValue;
-                        return;
+                    if (!queryWhere[relation]) {
+                        queryWhere[relation] = {};
+                        countQueryWhere[relation] = {};
                     }
 
-                    if (!queryTarget[part]) {
-                        queryTarget[part] = {};
+                    const queryRelation = queryWhere[relation] as Record<
+                        string,
+                        unknown
+                    >;
+                    const countRelation = countQueryWhere[relation] as Record<
+                        string,
+                        unknown
+                    >;
+
+                    queryRelation[nestedField] = this.parseFilterValue(value);
+                    countRelation[nestedField] = this.parseFilterValue(value);
+                    return;
+                } else if (parts.length === 3) {
+                    const [relation, nestedRelation, nestedField] = parts;
+
+                    if (!queryWhere[relation]) {
+                        queryWhere[relation] = {
+                            some: {},
+                        };
+                        countQueryWhere[relation] = {
+                            some: {},
+                        };
                     }
 
-                    if (!countTarget[part]) {
-                        countTarget[part] = {};
+                    const queryRelation = queryWhere[relation] as Record<
+                        string,
+                        unknown
+                    >;
+                    const countRelation = countQueryWhere[relation] as Record<
+                        string,
+                        unknown
+                    >;
+
+                    if (!queryRelation.some) {
+                        queryRelation.some = {};
+                    }
+                    if (!countRelation.some) {
+                        countRelation.some = {};
                     }
 
-                    queryTarget = queryTarget[part] as Record<string, unknown>;
-                    countTarget = countTarget[part] as Record<string, unknown>;
-                });
+                    const querySome = queryRelation.some as Record<
+                        string,
+                        unknown
+                    >;
+                    const countSome = countRelation.some as Record<
+                        string,
+                        unknown
+                    >;
 
+                    if (!querySome[nestedRelation]) {
+                        querySome[nestedRelation] = {};
+                    }
+
+                    if (!countSome[nestedRelation]) {
+                        countSome[nestedRelation] = {};
+                    }
+
+                    const queryNestedRelation = querySome[
+                        nestedRelation
+                    ] as Record<string, unknown>;
+                    const countNestedRelation = countSome[
+                        nestedRelation
+                    ] as Record<string, unknown>;
+
+                    queryNestedRelation[nestedField] =
+                        this.parseFilterValue(value);
+                    countNestedRelation[nestedField] =
+                        this.parseFilterValue(value);
+
+                    return;
+                }
+            }
+            if (!isAllowedField) {
                 return;
             }
 
-            // -----------------------------------------
-            // Normal field filter
-            // Example:
-            // ?gender=MALE
-            // ?isDeleted=false
-            // -----------------------------------------
+            // Range filter parsing
+            if (
+                typeof value === "object" &&
+                value !== null &&
+                !Array.isArray(value)
+            ) {
+                queryWhere[key] = this.parseRangeFilter(
+                    value as Record<string, string | number>,
+                );
+                countQueryWhere[key] = this.parseRangeFilter(
+                    value as Record<string, string | number>,
+                );
+                return;
+            }
 
-            queryWhere[key] = parsedValue;
-            countQueryWhere[key] = parsedValue;
+            //direct value parsing
+            queryWhere[key] = this.parseFilterValue(value);
+            countQueryWhere[key] = this.parseFilterValue(value);
         });
-
         return this;
     }
 
     paginate(): this {
-        const page = parseInt(this.queryParams.page || "1", 10);
-        const limit = parseInt(this.queryParams.limit || "10", 10);
-        this.page = page > 0 ? page : 1;
-        this.limit = limit > 0 ? limit : 10;
-        this.skip = (this.page - 1) * limit;
+        const page = Number(this.queryParams.page) || 1;
+        const limit = Number(this.queryParams.limit) || 10;
+
+        this.page = page;
+        this.limit = limit;
+        this.skip = (page - 1) * limit;
+
         this.query.skip = this.skip;
         this.query.take = this.limit;
 
         return this;
     }
+
     sort(): this {
         const sortBy = this.queryParams.sortBy || "createdAt";
         const sortOrder = this.queryParams.sortOrder === "asc" ? "asc" : "desc";
+
         this.sortBy = sortBy;
         this.sortOrder = sortOrder;
+
+        // /doctors?sortBy=user.name&sortOrder=asc => orderBy: { user: { name: 'asc' } }
+
         if (sortBy.includes(".")) {
             const parts = sortBy.split(".");
+
             if (parts.length === 2) {
                 const [relation, nestedField] = parts;
+
                 this.query.orderBy = {
-                    [relation]: { [nestedField]: sortOrder },
+                    [relation]: {
+                        [nestedField]: sortOrder,
+                    },
                 };
             } else if (parts.length === 3) {
                 const [relation, nestedRelation, nestedField] = parts;
+
                 this.query.orderBy = {
                     [relation]: {
-                        [nestedRelation]: { [nestedField]: sortOrder },
+                        [nestedRelation]: {
+                            [nestedField]: sortOrder,
+                        },
                     },
                 };
             } else {
@@ -316,43 +320,55 @@ export class QueryBuilder<
                     [sortBy]: sortOrder,
                 };
             }
+        } else {
+            this.query.orderBy = {
+                [sortBy]: sortOrder,
+            };
         }
         return this;
     }
+
     fields(): this {
         const fieldsParam = this.queryParams.fields;
+        // /doctors?fields=id,name,user => select: { id: true, name: true, user: { select: { name: true } } }
 
-        // no nesting fields selection is supported, only direct fields can be selected
+        //no nested field selection for now, only direct fields
         if (fieldsParam && typeof fieldsParam === "string") {
             const fieldsArray = fieldsParam
-                ? fieldsParam.split(",").map((f) => f.trim())
-                : [];
+                ?.split(",")
+                .map((field) => field.trim());
             this.selectFields = {};
-            fieldsArray.forEach((field) => {
+
+            fieldsArray?.forEach((field) => {
                 if (this.selectFields) {
                     this.selectFields[field] = true;
                 }
             });
+
             this.query.select = this.selectFields as Record<
                 string,
                 boolean | Record<string, unknown>
             >;
+
             delete this.query.include;
         }
-
         return this;
     }
+
     include(relation: TInclude): this {
-        if (this.selectFields !== null) {
+        if (this.selectFields) {
             return this;
         }
-        // if fields method is use, include methos will be ignored. because select and include cannot be used together in Prisma queries
+
+        //if fields method is, include method will be ignored to prevent conflict between select and include
         this.query.include = {
             ...(this.query.include as Record<string, unknown>),
             ...(relation as Record<string, unknown>),
         };
+
         return this;
     }
+
     dynamicInclude(
         includeConfig: Record<string, unknown>,
         defaultInclude?: string[],
@@ -360,40 +376,51 @@ export class QueryBuilder<
         if (this.selectFields) {
             return this;
         }
+
         const result: Record<string, unknown> = {};
-        defaultInclude?.forEach((f) => {
-            if (includeConfig[f]) {
-                result[f] = includeConfig[f];
+
+        defaultInclude?.forEach((field) => {
+            if (includeConfig[field]) {
+                result[field] = includeConfig[field];
             }
         });
-        const includesParam = this.queryParams.includes as string | undefined;
-        if (includesParam && typeof includesParam === "string") {
-            const requestedRelation = includesParam
+
+        const includeParam = this.queryParams.include as string | undefined;
+
+        if (includeParam && typeof includeParam === "string") {
+            const requestedRelations = includeParam
                 .split(",")
-                .map((r) => r.trim());
-            requestedRelation.forEach((r) => {
-                if (includeConfig[r]) {
-                    result[r] = includeConfig[r];
+                .map((relation) => relation.trim());
+
+            requestedRelations.forEach((relation) => {
+                if (includeConfig[relation]) {
+                    result[relation] = includeConfig[relation];
                 }
             });
         }
+
         this.query.include = {
             ...(this.query.include as Record<string, unknown>),
             ...result,
         };
+
         return this;
     }
+
     where(condition: TWhereInput): this {
         this.query.where = this.deepMerge(
             this.query.where as Record<string, unknown>,
             condition as Record<string, unknown>,
         );
+
         this.countQuery.where = this.deepMerge(
             this.countQuery.where as Record<string, unknown>,
             condition as Record<string, unknown>,
         );
+
         return this;
     }
+
     async execute(): Promise<IQueryResult<T>> {
         const [total, data] = await Promise.all([
             this.model.count(
@@ -403,7 +430,9 @@ export class QueryBuilder<
                 this.query as Parameters<typeof this.model.findMany>[0],
             ),
         ]);
+
         const totalPages = Math.ceil(total / this.limit);
+
         return {
             data: data as T[],
             meta: {
@@ -414,19 +443,23 @@ export class QueryBuilder<
             },
         };
     }
+
     async count(): Promise<number> {
         return await this.model.count(
             this.countQuery as Parameters<typeof this.model.count>[0],
         );
     }
+
     getQuery(): PrismaFindManyArgs {
-        return this.query as PrismaFindManyArgs;
+        return this.query;
     }
+
     private deepMerge(
         target: Record<string, unknown>,
         source: Record<string, unknown>,
     ): Record<string, unknown> {
         const result = { ...target };
+
         for (const key in source) {
             if (
                 source[key] &&
@@ -451,6 +484,7 @@ export class QueryBuilder<
         }
         return result;
     }
+
     private parseFilterValue(value: unknown): unknown {
         if (value === "true") {
             return true;
@@ -458,32 +492,32 @@ export class QueryBuilder<
         if (value === "false") {
             return false;
         }
-        if (
-            typeof value === "string" &&
-            !isNaN(Number(value)) &&
-            value.trim() !== ""
-        ) {
+
+        if (typeof value === "string" && !isNaN(Number(value)) && value != "") {
             return Number(value);
         }
+
         if (Array.isArray(value)) {
-            return {
-                in: value.map((v) => this.parseFilterValue(v)),
-            };
+            return { in: value.map((item) => this.parseFilterValue(item)) };
         }
+
         return value;
     }
-    private parseRangeFilterValue(
+
+    private parseRangeFilter(
         value: Record<string, string | number>,
     ):
         | PrismaNumberFilterParms
         | PrismaStringFilterParms
-        | Record<string, string | number> {
-        const rangeFilter: Record<
+        | Record<string, unknown> {
+        const rangeQuery: Record<
             string,
             string | number | (string | number)[]
         > = {};
+
         Object.keys(value).forEach((operator) => {
             const operatorValue = value[operator];
+
             const parsedValue: string | number =
                 typeof operatorValue === "string" &&
                 !isNaN(Number(operatorValue))
@@ -491,29 +525,31 @@ export class QueryBuilder<
                     : operatorValue;
 
             switch (operator) {
-                case "equals":
-                case "lte":
-                case "gte":
-                case "gt":
                 case "lt":
+                case "lte":
+                case "gt":
+                case "gte":
+                case "equals":
                 case "not":
                 case "contains":
                 case "startsWith":
                 case "endsWith":
-                    rangeFilter[operator] = parsedValue;
+                    rangeQuery[operator] = parsedValue;
                     break;
+
                 case "in":
                 case "notIn":
                     if (Array.isArray(operatorValue)) {
-                        rangeFilter[operator] = operatorValue;
+                        rangeQuery[operator] = operatorValue;
                     } else {
-                        rangeFilter[operator] = [parsedValue];
+                        rangeQuery[operator] = [parsedValue];
                     }
                     break;
                 default:
                     break;
             }
         });
-        return Object.keys(rangeFilter).length > 0 ? rangeFilter : value;
+
+        return Object.keys(rangeQuery).length > 0 ? rangeQuery : value;
     }
 }

@@ -4,6 +4,7 @@ export const doctorSearchableFields = [
     "name",
     "email",
     "qualification",
+    "designation",
     "currentWorkingPlace",
     "registrationNumber",
     "specialties.specialty.title",
@@ -15,11 +16,12 @@ export const doctorFilterableFields = [
     "appointmentFee",
     "experience",
     "registrationNumber",
-    "specialties.specialityId",
+    "specialties.specialtyId",
     "currentWorkingPlace",
     "designation",
     "qualification",
     "specialties.specialty.title",
+    "user.role",
 ];
 
 export const doctorIncludeConfig: Partial<
@@ -38,7 +40,6 @@ export const doctorIncludeConfig: Partial<
         include: {
             patient: true,
             doctor: true,
-            prescription: true,
         },
     },
     doctorSchedules: {
@@ -46,6 +47,6 @@ export const doctorIncludeConfig: Partial<
             schedule: true,
         },
     },
-    reviews: true,
     prescriptions: true,
+    reviews: true,
 };

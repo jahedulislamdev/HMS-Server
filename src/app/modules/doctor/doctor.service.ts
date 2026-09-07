@@ -33,7 +33,36 @@ const getDoctors = async (query: IQueryParams) => {
         .execute();
 };
 
+// const getDoctors = async () => {
+//     const result = await prisma.doctor.findMany({
+//         where: {
+//             isDeleted: false,
+//             specialties: {
+//                 some: {
+//                     specialty: {
+//                         title: { contains: "cardio", mode: "insensitive" },
+//                     },
+//                 },
+//             },
+//         },
+//         include: {
+//             specialties: {
+//                 include: {
+//                     specialty: {
+//                         select: {
+//                             id: true,
+//                             title: true,
+//                         },
+//                     },
+//                 },
+//             },
+//         },
+//     });
+//     console.log(result);
+// };
+
 //* get doctor by id
+
 const getDoctorById = async ({ id }: { id: string }) => {
     return await prisma.doctor.findUnique({
         where: { id },
