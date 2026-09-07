@@ -13,7 +13,8 @@ const getDoctors = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         message: "doctors retrieved successfully",
-        data: result,
+        data: result.data,
+        meta: result.meta,
     });
 });
 
