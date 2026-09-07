@@ -406,21 +406,17 @@ export class QueryBuilder<
 
         return this;
     }
-
     where(condition: TWhereInput): this {
         this.query.where = this.deepMerge(
             this.query.where as Record<string, unknown>,
             condition as Record<string, unknown>,
         );
-
         this.countQuery.where = this.deepMerge(
             this.countQuery.where as Record<string, unknown>,
             condition as Record<string, unknown>,
         );
-
         return this;
     }
-
     async execute(): Promise<IQueryResult<T>> {
         const [total, data] = await Promise.all([
             this.model.count(
@@ -430,9 +426,7 @@ export class QueryBuilder<
                 this.query as Parameters<typeof this.model.findMany>[0],
             ),
         ]);
-
         const totalPages = Math.ceil(total / this.limit);
-
         return {
             data: data as T[],
             meta: {
@@ -443,23 +437,19 @@ export class QueryBuilder<
             },
         };
     }
-
     async count(): Promise<number> {
         return await this.model.count(
             this.countQuery as Parameters<typeof this.model.count>[0],
         );
     }
-
     getQuery(): PrismaFindManyArgs {
-        return this.query;
+        return this.query as PrismaFindManyArgs;
     }
-
     private deepMerge(
         target: Record<string, unknown>,
         source: Record<string, unknown>,
     ): Record<string, unknown> {
         const result = { ...target };
-
         for (const key in source) {
             if (
                 source[key] &&
@@ -478,13 +468,10 @@ export class QueryBuilder<
                 } else {
                     result[key] = source[key];
                 }
-            } else {
-                result[key] = source[key];
             }
         }
         return result;
     }
-
     private parseFilterValue(value: unknown): unknown {
         if (value === "true") {
             return true;

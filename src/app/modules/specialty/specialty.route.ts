@@ -7,13 +7,15 @@ import {
     createSpecialtySchema,
     updateSpecialtySchema,
 } from "./specialty.validation";
+import { multerUpload } from "../../../config/multer.config";
 
 const router = Router();
 
 router.post(
     "/",
+    // checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    multerUpload.single("file"),
     validateRequest(createSpecialtySchema),
-    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
     specialtyController.createSpecialty,
 );
 router.get("/", specialtyController.getAllSpecialty);

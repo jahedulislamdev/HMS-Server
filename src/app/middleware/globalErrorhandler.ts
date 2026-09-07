@@ -4,18 +4,32 @@ import { Prisma } from "../../generated/prisma/client";
 import { envVars } from "../../config/env";
 import { StatusCodes } from "http-status-codes";
 import { ZodError } from "zod";
+import { deleteFileFromCloudinary } from "../../config/cloudinary.config";
 
 // global error handler
-export function errorHandler(
+export async function errorHandler(
     err: any,
     req: Request,
     res: Response,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     next: NextFunction,
 ) {
     let status: number = StatusCodes.INTERNAL_SERVER_ERROR;
     let message: string = "Internal server Error";
     let errorDetails: unknown = null;
 
+    //!delete cloudinary file when throw uploading error
+    // single file
+    if (req.file) {
+        await deleteFileFromCloudinary(req.file.path);
+    }
+    // multiple file
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+        const imageUrls = req.files.map((f) => f.path);
+        await Promise.all(
+            imageUrls.map((url) => deleteFileFromCloudinary(url)),
+        );
+    }
     //! zod validation error
     if (err instanceof ZodError) {
         return res.status(StatusCodes.BAD_REQUEST).json({
